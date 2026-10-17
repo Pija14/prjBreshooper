@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#6750A4">
+  <meta name="description" content="Breshopper — compra, venda e consignação.">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/global.css">
+  <title>Breshopper</title>
+</head>
+<body>
+  <main class="auth-shell">
+    <section class="brand-panel">
+      <div class="brand-mark" aria-hidden="true">B</div>
+      <span class="eyebrow">BRESHOPPER</span>
+      <h1>Venda, compre e transforme sua venda em crédito.</h1>
+      <p>Uma experiência simples para consignação, compra e venda de produtos.</p>
+    </section>
+    <section class="login-card surface">
+      <span class="eyebrow">Bem-vindo</span>
+      <h2>Entre no Breshopper</h2>
+      <p class="supporting">Use sua conta Google para acessar sua conta.</p>
+      <button id="googleLogin" class="button button-filled" type="button"><span class="google-icon">G</span>Continuar com Google</button>
+      <p id="loginMessage" class="message" role="status"></p>
+    </section>
+  </main>
+  <script src="/js/app.js"></script>
+  <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js");</script>
+</body>
+</html>
