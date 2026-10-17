@@ -18,4 +18,4 @@ class Evaluation(Base):
     sale_price: Mapped[object] = mapped_column(Numeric(12, 2), nullable=False)
     seller_amount: Mapped[object] = mapped_column(Numeric(12, 2), nullable=False)
     store_amount: Mapped[object] = mapped_column(Numeric(12, 2), nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="APPROVED")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="APROVADA")
