@@ -40,12 +40,39 @@ def upgrade() -> None:
     op.create_foreign_key("fk_produtos_categoria_id", "produtos", "categorias", ["categoria_id"], ["id"])
     op.create_foreign_key("fk_produtos_marca_id", "produtos", "marcas", ["marca_id"], ["id"])
 
-    # A antiga coluna textual categoria não pode permanecer depois da normalização.
+    # Preserva categorias textuais existentes, convertendo-as para o cadastro normalizado.
+    op.execute(
+        """
+        INSERT INTO categorias (nome, status)
+        SELECT DISTINCT TRIM(categoria), 'ATIVO'
+        FROM produtos
+        WHERE categoria IS NOT NULL AND TRIM(categoria) <> ''
+        ON CONFLICT (nome) DO NOTHING
+        """
+    )
+    op.execute(
+        """
+        UPDATE produtos p
+        SET categoria_id = c.id
+        FROM categorias c
+        WHERE p.categoria IS NOT NULL
+          AND TRIM(p.categoria) = c.nome
+        """
+    )
+
     op.drop_column("produtos", "categoria")
 
 
 def downgrade() -> None:
     op.add_column("produtos", sa.Column("categoria", sa.String(length=100), nullable=True))
+    op.execute(
+        """
+        UPDATE produtos p
+        SET categoria = c.nome
+        FROM categorias c
+        WHERE p.categoria_id = c.id
+        """
+    )
     op.drop_constraint("fk_produtos_marca_id", "produtos", type_="foreignkey")
     op.drop_constraint("fk_produtos_categoria_id", "produtos", type_="foreignkey")
     op.drop_column("produtos", "marca_id")
