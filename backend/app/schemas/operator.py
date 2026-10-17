@@ -7,6 +7,11 @@ class OperatorCreate(BaseModel):
     perfil: str = "OPERADOR"
 
 
+class OperatorUpdate(BaseModel):
+    perfil: str | None = None
+    status: str | None = None
+
+
 class OperatorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
