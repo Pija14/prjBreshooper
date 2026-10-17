@@ -1,0 +1,544 @@
+# Beeshopper
+
+## 1. O que é o Beeshopper
+
+O **Beeshopper** é uma plataforma de compra e venda de produtos usados ou seminovos, conectando **usuários vendedores, usuários compradores e lojas parceiras**.
+
+A proposta central é permitir que uma pessoa ofereça um produto para uma loja. A loja, por meio de um **operador**, cadastra e avalia o produto, define o valor de venda e estabelece como o valor será dividido entre o vendedor e a loja.
+
+O diferencial do modelo é que a parcela destinada ao vendedor pode ser disponibilizada como **crédito dentro do Beeshopper/loja**, criando uma espécie de conta corrente do usuário.
+
+### Exemplo principal
+
+Rafael entrega uma raquete para a loja.
+
+- Valor de venda definido pelo Beeshopper: **R$ 1.000**
+- Valor destinado ao usuário vendedor: **R$ 600**
+- Valor destinado à loja: **R$ 400**
+
+Quando outro usuário compra a raquete por R$ 1.000, os R$ 600 pertencentes ao vendedor podem ser liberados como crédito na loja ou, conforme a regra definida, pagos por PIX.
+
+O Beeshopper, portanto, não é apenas um catálogo de produtos: ele controla a **origem do produto, avaliação, venda e posteriormente o crédito financeiro gerado para o usuário**.
+
+---
+
+## 2. Conceitos fundamentais
+
+### Usuário
+
+É a pessoa que utiliza o Beeshopper.
+
+Um mesmo usuário pode exercer papéis diferentes em momentos diferentes:
+
+- vendedor;
+- comprador;
+- beneficiário de crédito.
+
+Não existe uma entidade separada de “vendedor”. O vendedor é um **usuário** que possui um produto para vender.
+
+### Loja
+
+É a empresa/estabelecimento parceiro que recebe produtos, participa da avaliação, vende produtos e recebe a parcela que lhe cabe na operação.
+
+### Operador
+
+É um usuário vinculado a uma loja que atua **em nome da loja** dentro do sistema.
+
+No MVP, somente o **operador ativo da própria loja** pode realizar operações administrativas sobre produtos, como o cadastro e a avaliação.
+
+### Produto
+
+É o item colocado à venda pelo usuário e recebido/cadastrado por uma loja.
+
+O produto mantém a relação com:
+
+- usuário vendedor;
+- loja;
+- operador responsável pelo cadastro;
+- categoria;
+- marca;
+- avaliação;
+- valor de venda;
+- status.
+
+### Categoria
+
+Cadastro utilizado para classificar produtos.
+
+Exemplos:
+
+- Raquetes de Tênis;
+- Bicicletas;
+- Eletrônicos;
+- Celulares.
+
+### Marca
+
+Cadastro utilizado para identificar a marca do produto.
+
+Exemplos:
+
+- Babolat;
+- Wilson;
+- Head;
+- Apple.
+
+### Avaliação
+
+É a etapa em que o operador da loja analisa o produto e registra o valor pelo qual ele será disponibilizado para venda, além da divisão financeira entre usuário e loja.
+
+Exemplo:
+
+```text
+Valor de venda:       R$ 1.000
+Valor do usuário:     R$   600
+Valor da loja:        R$   400
+```
+
+A soma dos valores do usuário e da loja deve ser exatamente igual ao valor de venda.
+
+---
+
+## 3. Fluxo de negócio do MVP
+
+```text
+USUÁRIO
+   │
+   │ entrega produto
+   ▼
+LOJA
+   │
+   │ operador cadastra
+   ▼
+PRODUTO
+   │
+   │ categoria + marca
+   ▼
+AVALIAÇÃO
+   │
+   ├── valor de venda
+   ├── valor do usuário
+   └── valor da loja
+   │
+   ▼
+PRODUTO DISPONÍVEL
+   │
+   │ comprador realiza compra
+   ▼
+VENDA
+   │
+   ▼
+CONTA CORRENTE DO USUÁRIO
+   │
+   └── crédito gerado pela venda
+```
+
+---
+
+## 4. Regras já definidas
+
+### Regra 1 — Usuário também pode comprar e vender
+
+Não existe uma tabela/entidade “vendedor”. O vendedor é o próprio usuário.
+
+### Regra 2 — Operador pertence à loja
+
+O operador é um usuário vinculado a uma loja.
+
+### Regra 3 — Somente operador da loja pode cadastrar produto
+
+Um operador precisa:
+
+- estar ativo;
+- pertencer à loja do produto;
+- estar executando a operação em nome da própria loja.
+
+### Regra 4 — Produto possui categoria e marca
+
+Categoria e marca são cadastros independentes e são referenciadas pelo produto por seus respectivos IDs.
+
+### Regra 5 — Avaliação pertence ao produto
+
+Um produto pode possuir uma avaliação no MVP.
+
+### Regra 6 — Divisão da avaliação deve fechar
+
+```text
+valor_usuario + valor_loja = valor_venda
+```
+
+Não são permitidas diferenças entre os valores.
+
+### Regra 7 — Status do domínio são em português
+
+Os nomes utilizados pela aplicação e pelo domínio devem permanecer em português.
+
+Exemplos:
+
+```text
+ATIVO
+INATIVO
+RECEBIDO
+DISPONIVEL
+VENDIDO
+CANCELADO
+PENDENTE
+APROVADA
+CONCLUIDA
+```
+
+---
+
+## 5. Estado atual do projeto
+
+O projeto está em uma fase de **MVP funcional de backend + primeiro frontend**.
+
+### Backend
+
+O backend está implementado em Python/FastAPI e publicado no Render.
+
+API:
+
+https://breshopper-api.onrender.com
+
+Swagger:
+
+https://breshopper-api.onrender.com/docs
+
+### Banco
+
+O projeto utiliza PostgreSQL e Alembic para controle das migrations.
+
+### Frontend
+
+Existe um frontend web em HTML/CSS/JavaScript, publicado no GitHub Pages:
+
+https://pija14.github.io/prjBreshooper/
+
+A primeira tela de login já está disponível visualmente.
+
+O botão de login com Google ainda é apenas uma preparação da interface; o OAuth/OIDC real ainda não foi integrado.
+
+### Estrutura funcional já construída
+
+- [x] Usuários
+- [x] Lojas
+- [x] Operadores
+- [x] Categorias
+- [x] Marcas
+- [x] Produtos
+- [x] Avaliações
+- [x] Documentação básica do Swagger em português
+- [x] Frontend inicial
+- [x] Tela de login visual
+- [x] Publicação do frontend no GitHub Pages
+- [x] Publicação da API no Render
+
+---
+
+## 6. Estrutura atual de dados
+
+A estrutura conceitual atual é:
+
+```text
+USUARIOS
+   │
+   ├───────────────┐
+   │               │
+   ▼               ▼
+OPERADORES       PRODUTOS
+   │               │
+   ▼               ├── CATEGORIA
+ LOJAS             ├── MARCA
+                   ├── USUÁRIO VENDEDOR
+                   └── OPERADOR
+                        │
+                        ▼
+                    AVALIAÇÃO
+```
+
+### Entidades principais
+
+```text
+usuarios
+lojas
+operadores
+categorias
+marcas
+produtos
+avaliacoes
+```
+
+A nomenclatura do domínio e dos JSONs da API deve permanecer em português.
+
+---
+
+## 7. O que falta para concluir o MVP
+
+A partir do estado atual, o caminho recomendado é:
+
+### Fase 1 — Autenticação real
+
+Conectar a tela de login ao Google OAuth/OIDC.
+
+Objetivos:
+
+- autenticar usuário;
+- identificar o usuário na API;
+- criar ou localizar o cadastro do usuário;
+- manter sessão autenticada;
+- proteger endpoints que exigem autenticação.
+
+---
+
+### Fase 2 — Tela inicial autenticada
+
+Depois do login, criar a primeira área autenticada do Beeshopper.
+
+Deve apresentar inicialmente:
+
+- saudação do usuário;
+- ações principais;
+- comprar;
+- vender;
+- meus produtos;
+- saldo/crédito;
+- histórico básico.
+
+Nesta fase o objetivo principal é validar a experiência do produto, sem tentar construir todo o sistema visual de uma vez.
+
+---
+
+### Fase 3 — Fluxo de entrada de produto
+
+Criar no frontend o fluxo:
+
+```text
+Usuário
+   ↓
+Vender produto
+   ↓
+Informar produto
+   ↓
+Loja recebe
+   ↓
+Operador cadastra
+   ↓
+Produto RECEBIDO
+```
+
+Para o MVP, o usuário não deve conseguir transformar diretamente o produto em disponível para venda. A loja/operator controla essa etapa.
+
+---
+
+### Fase 4 — Avaliação
+
+Criar a interface e a integração para o operador avaliar o produto.
+
+Fluxo:
+
+```text
+Produto RECEBIDO
+      ↓
+Operador da loja
+      ↓
+Avaliação
+      ├── valor de venda
+      ├── valor do usuário
+      └── valor da loja
+      ↓
+Produto DISPONIVEL
+```
+
+Deve haver validação para garantir que a divisão financeira feche exatamente.
+
+---
+
+### Fase 5 — Catálogo e compra
+
+Criar a experiência do comprador:
+
+```text
+DISPONIVEIS
+    ↓
+Lista de produtos
+    ↓
+Detalhes do produto
+    ↓
+Comprar
+```
+
+O MVP pode começar com um catálogo simples, com filtros básicos por:
+
+- categoria;
+- marca;
+- loja.
+
+---
+
+### Fase 6 — Venda
+
+Criar a entidade e o fluxo de venda.
+
+A venda deve registrar pelo menos:
+
+- produto;
+- comprador;
+- loja;
+- valor da venda;
+- status;
+- data/hora;
+- referência da operação.
+
+Fluxo:
+
+```text
+PRODUTO DISPONIVEL
+       ↓
+COMPRADOR
+       ↓
+VENDA
+       ↓
+PRODUTO VENDIDO
+```
+
+---
+
+### Fase 7 — Conta corrente do usuário
+
+Este é um dos pontos centrais do modelo de negócio.
+
+Depois de uma venda, a parcela destinada ao usuário deve gerar um crédito.
+
+Exemplo:
+
+```text
+Venda:                 R$ 1.000
+Crédito do usuário:    R$   600
+Receita da loja:       R$   400
+```
+
+A conta corrente deve registrar a movimentação, permitindo posteriormente consultar o saldo e o histórico.
+
+---
+
+### Fase 8 — Crédito / PIX
+
+Depois da conta corrente básica funcionar, implementar as formas de disponibilização do crédito.
+
+Inicialmente:
+
+```text
+CRÉDITO DO USUÁRIO
+       │
+       ├── utilizar na loja
+       │
+       └── solicitar PIX
+```
+
+A regra operacional de quando o PIX pode ser solicitado deve ser definida antes da implementação financeira final.
+
+---
+
+## 8. MVP concluído — definição
+
+Consideraremos o MVP concluído quando for possível executar ponta a ponta o seguinte cenário:
+
+```text
+1. Usuário entra no Beeshopper
+          ↓
+2. Usuário possui/entrega um produto
+          ↓
+3. Loja recebe o produto
+          ↓
+4. Operador cadastra o produto
+          ↓
+5. Operador avalia o produto
+          ↓
+6. Produto fica disponível
+          ↓
+7. Outro usuário compra
+          ↓
+8. Venda é registrada
+          ↓
+9. Produto fica vendido
+          ↓
+10. Parcela do vendedor vira crédito
+          ↓
+11. Usuário consulta seu saldo/histórico
+```
+
+O MVP **não precisa inicialmente** ter todos os recursos de um marketplace completo. O foco é provar esse ciclo principal com regras de negócio corretas.
+
+---
+
+## 9. O que não deve ser antecipado
+
+Para manter o MVP enxuto, evitar inicialmente:
+
+- sistema complexo de comissões;
+- múltiplos tipos de conta;
+- marketplace avançado;
+- chat entre usuários;
+- avaliações/reviews de compradores;
+- logística própria;
+- programa de fidelidade;
+- BI avançado;
+- regras complexas de precificação automática;
+- integração financeira completa antes do fluxo de venda estar validado.
+
+Esses recursos podem entrar depois que o ciclo principal estiver funcionando.
+
+---
+
+## 10. Diretrizes para desenvolvimento com Claude ou outras IAs
+
+Este arquivo deve ser utilizado como **contexto funcional do projeto** por qualquer IA que participe do desenvolvimento.
+
+Antes de alterar código, a IA deve:
+
+1. entender o fluxo descrito neste documento;
+2. preservar as regras de negócio já definidas;
+3. não criar uma entidade “vendedor” separada de usuário;
+4. manter operador como usuário vinculado à loja;
+5. respeitar que somente operador da própria loja pode operar produtos da loja;
+6. manter nomes de domínio, tabelas, campos de resposta e status em português;
+7. não introduzir regras financeiras que não estejam definidas;
+8. não remover funcionalidades existentes sem justificar;
+9. preferir migrations para alterações de banco;
+10. manter o Swagger documentado em português;
+11. testar o fluxo afetado antes de considerar a etapa concluída.
+
+### Regra de ouro
+
+> **Não implementar complexidade antes de validar o fluxo principal do MVP.**
+
+---
+
+## 11. Próximo passo recomendado
+
+O próximo desenvolvimento deve ser **autenticação real**, conectando a tela de login publicada no GitHub Pages ao backend FastAPI no Render.
+
+Depois disso, seguir nesta ordem:
+
+```text
+LOGIN REAL
+   ↓
+ÁREA AUTENTICADA
+   ↓
+ENTRADA DE PRODUTO
+   ↓
+AVALIAÇÃO
+   ↓
+CATÁLOGO
+   ↓
+VENDA
+   ↓
+CONTA CORRENTE
+   ↓
+CRÉDITO / PIX
+   ↓
+MVP
+```
+
+Este documento deve ser atualizado sempre que uma regra estrutural do produto for alterada ou quando uma etapa importante do MVP for concluída.
