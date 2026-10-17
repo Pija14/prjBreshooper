@@ -3,19 +3,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.database.session import SessionLocal
+from app.database.session import get_db
 from app.models.brand import Brand
 from app.schemas.brand import BrandCreate, BrandResponse
 
 router = APIRouter(prefix="/api/marcas", tags=["Marcas"])
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("", response_model=list[BrandResponse], summary="Listar marcas", description="Retorna as marcas cadastradas no Beeshopper.")

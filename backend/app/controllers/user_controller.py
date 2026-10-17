@@ -3,19 +3,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.database.session import SessionLocal
+from app.database.session import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse
 
 router = APIRouter(prefix="/api/usuarios", tags=["Usuários"])
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("", response_model=list[UserResponse], summary="Listar usuários", description="Retorna todos os usuários cadastrados no Beeshopper.")

@@ -10,3 +10,12 @@ if database_url.startswith("postgresql://"):
 
 engine = create_engine(database_url, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+def get_db():
+    """Dependência do FastAPI: abre uma sessão por requisição e a fecha ao final."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

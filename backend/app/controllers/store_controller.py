@@ -3,19 +3,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.database.session import SessionLocal
+from app.database.session import get_db
 from app.models.store import Store
 from app.schemas.loja import LojaCreate, LojaResponse
 
 router = APIRouter(prefix="/api/lojas", tags=["Lojas"])
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("", response_model=list[LojaResponse], summary="Listar lojas", description="Retorna todas as lojas cadastradas no Beeshopper.")

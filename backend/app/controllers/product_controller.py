@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.database.session import SessionLocal
+from app.database.session import get_db
 from app.models.brand import Brand
 from app.models.category import Category
 from app.models.operator import Operator
@@ -14,13 +14,6 @@ from app.schemas.product import ProductCreate, ProductResponse
 
 router = APIRouter(prefix="/api/produtos", tags=["Produtos"])
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("", response_model=list[ProductResponse], summary="Listar produtos", description="Retorna os produtos cadastrados no Beeshopper. Pode filtrar os produtos por loja, categoria ou marca.")

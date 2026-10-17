@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.database.session import SessionLocal
+from app.database.session import get_db
 from app.models.store import Store
 from app.models.operator import Operator
 from app.models.user import User
@@ -13,13 +13,6 @@ router = APIRouter(prefix="/api/operadores", tags=["Operadores"])
 
 VALID_PERFIS = {"ADMINISTRADOR", "OPERADOR"}
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("", response_model=list[OperatorResponse], summary="Listar operadores", description="Retorna os usuários vinculados a lojas como operadores do Beeshopper.")

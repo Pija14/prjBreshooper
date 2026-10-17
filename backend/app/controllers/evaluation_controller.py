@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.database.session import SessionLocal
+from app.database.session import get_db
 from app.models.evaluation import Evaluation
 from app.models.operator import Operator
 from app.models.product import Product
@@ -11,13 +11,6 @@ from app.schemas.evaluation import EvaluationCreate, EvaluationResponse
 
 router = APIRouter(prefix="/api/avaliacoes", tags=["Avaliações"])
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("", response_model=list[EvaluationResponse], summary="Listar avaliações", description="Retorna as avaliações registradas para os produtos do Beeshopper.")

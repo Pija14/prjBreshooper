@@ -3,19 +3,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.database.session import SessionLocal
+from app.database.session import get_db
 from app.models.category import Category
 from app.schemas.category import CategoryCreate, CategoryResponse
 
 router = APIRouter(prefix="/api/categorias", tags=["Categorias"])
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("", response_model=list[CategoryResponse], summary="Listar categorias", description="Retorna as categorias cadastradas no Beeshopper.")

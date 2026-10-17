@@ -1,5 +1,8 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import settings
+from app.controllers.auth_controller import router as auth_router
 from app.controllers.health_controller import router as health_router
 from app.controllers.store_controller import router as store_router
 from app.controllers.user_controller import router as user_router
@@ -16,11 +19,21 @@ app = FastAPI(
         "API do MVP Breshopper. O sistema conecta usuários e lojas para "
         "facilitar a compra e venda de produtos, com operação realizada "
         "pelos operadores das lojas. O MVP controla usuários, lojas, "
-        "operadores, categorias, marcas, produtos e avaliações."
+        "operadores, categorias, marcas, produtos e avaliações, com login pelo Google."
     ),
 )
 
+# O frontend é publicado em outra origem (GitHub Pages); o navegador só permite as chamadas com CORS.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+
 app.include_router(health_router)
+app.include_router(auth_router)
 app.include_router(store_router)
 app.include_router(user_router)
 app.include_router(operator_router)
