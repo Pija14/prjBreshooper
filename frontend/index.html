@@ -4,25 +4,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#6750A4">
-  <meta name="description" content="Breshopper — compra, venda e consignação.">
+  <meta name="description" content="Beeshopper — compre, venda e transforme sua venda em crédito.">
   <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/css/global.css">
-  <title>Breshopper</title>
+  <title>Entrar — Beeshopper</title>
 </head>
 <body>
   <main class="auth-shell">
-    <section class="brand-panel">
+    <section class="brand-panel" aria-label="Sobre o Beeshopper">
       <div class="brand-mark" aria-hidden="true">B</div>
       <span class="eyebrow">BRESHOPPER</span>
-      <h1>Venda, compre e transforme sua venda em crédito.</h1>
-      <p>Uma experiência simples para consignação, compra e venda de produtos.</p>
+      <h1>Compre, venda e transforme sua venda em crédito.</h1>
+      <p>Um jeito simples de vender seus produtos, comprar oportunidades e acompanhar seu saldo em um só lugar.</p>
     </section>
-    <section class="login-card surface">
+
+    <section class="login-card surface" aria-labelledby="loginTitle">
       <span class="eyebrow">Bem-vindo</span>
-      <h2>Entre no Breshopper</h2>
-      <p class="supporting">Use sua conta Google para acessar sua conta.</p>
-      <button id="googleLogin" class="button button-filled" type="button"><span class="google-icon">G</span>Continuar com Google</button>
-      <p id="loginMessage" class="message" role="status"></p>
+      <h2 id="loginTitle">Entre no Beeshopper</h2>
+      <p class="supporting">Acesse sua conta para comprar, vender e acompanhar suas operações.</p>
+
+      <button id="googleLogin" class="button button-filled" type="button" aria-describedby="loginMessage">
+        <span class="google-icon" aria-hidden="true">G</span>
+        <span>Continuar com Google</span>
+      </button>
+
+      <div class="login-divider" aria-hidden="true"><span>acesso seguro</span></div>
+      <p id="loginMessage" class="message" role="status" aria-live="polite"></p>
+      <p class="login-terms">Ao continuar, você concorda com os termos de uso e a política de privacidade do Beeshopper.</p>
     </section>
   </main>
   <script src="/js/app.js"></script>
