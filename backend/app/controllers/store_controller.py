@@ -7,7 +7,7 @@ from app.database.session import SessionLocal
 from app.models.store import Store
 from app.schemas.store import StoreCreate, StoreResponse
 
-router = APIRouter(prefix="/api/stores", tags=["Stores"])
+router = APIRouter(prefix="/api/stores", tags=["Lojas"])
 
 
 def get_db():
@@ -18,12 +18,12 @@ def get_db():
         db.close()
 
 
-@router.get("", response_model=list[StoreResponse])
+@router.get("", response_model=list[StoreResponse], summary="Listar lojas", description="Retorna todas as lojas cadastradas no Beeshopper.")
 def list_stores(db: Session = Depends(get_db)):
     return db.scalars(select(Store).order_by(Store.id)).all()
 
 
-@router.get("/{store_id}", response_model=StoreResponse)
+@router.get("/{store_id}", response_model=StoreResponse, summary="Consultar loja", description="Retorna os dados de uma loja específica pelo identificador.")
 def get_store(store_id: int, db: Session = Depends(get_db)):
     store = db.get(Store, store_id)
     if not store:
@@ -31,7 +31,7 @@ def get_store(store_id: int, db: Session = Depends(get_db)):
     return store
 
 
-@router.post("", response_model=StoreResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=StoreResponse, status_code=status.HTTP_201_CREATED, summary="Cadastrar loja", description="Cadastra uma loja parceira que poderá receber produtos e realizar operações de venda no Beeshopper.")
 def create_store(payload: StoreCreate, db: Session = Depends(get_db)):
     name = payload.name.strip()
     document = payload.document.strip() if payload.document else None
