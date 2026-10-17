@@ -4,6 +4,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database.session import SessionLocal
+from app.models.brand import Brand
+from app.models.category import Category
 from app.models.operator import Operator
 from app.models.product import Product
 from app.models.store import Store
@@ -21,15 +23,24 @@ def get_db():
         db.close()
 
 
-@router.get("", response_model=list[ProductResponse], summary="Listar produtos", description="Retorna os produtos cadastrados no Beeshopper. Pode filtrar os produtos por loja.")
-def list_products(loja_id: int | None = None, db: Session = Depends(get_db)):
+@router.get("", response_model=list[ProductResponse], summary="Listar produtos", description="Retorna os produtos cadastrados no Beeshopper. Pode filtrar os produtos por loja, categoria ou marca.")
+def list_products(
+    loja_id: int | None = None,
+    categoria_id: int | None = None,
+    marca_id: int | None = None,
+    db: Session = Depends(get_db),
+):
     query = select(Product).order_by(Product.id)
     if loja_id is not None:
         query = query.where(Product.loja_id == loja_id)
+    if categoria_id is not None:
+        query = query.where(Product.categoria_id == categoria_id)
+    if marca_id is not None:
+        query = query.where(Product.marca_id == marca_id)
     return db.scalars(query).all()
 
 
-@router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED, summary="Cadastrar produto", description="Cadastra um produto recebido pela loja. Somente um operador ativo da própria loja pode realizar o cadastro. O produto fica vinculado ao usuário proprietário, à loja e ao operador responsável pelo cadastro.")
+@router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED, summary="Cadastrar produto", description="Cadastra um produto recebido pela loja. Somente um operador ativo da própria loja pode realizar o cadastro. O produto fica vinculado ao usuário proprietário, à loja, ao operador responsável, à categoria e à marca.")
 def create_product(
     payload: ProductCreate,
     operador_id: int,
@@ -53,13 +64,24 @@ def create_product(
     if vendedor.status != "ATIVO":
         raise HTTPException(status_code=400, detail="Usuário vendedor está inativo")
 
+    if payload.categoria_id is not None:
+        categoria = db.get(Category, payload.categoria_id)
+        if not categoria or categoria.status != "ATIVO":
+            raise HTTPException(status_code=400, detail="Categoria não encontrada ou inativa")
+
+    if payload.marca_id is not None:
+        marca = db.get(Brand, payload.marca_id)
+        if not marca or marca.status != "ATIVO":
+            raise HTTPException(status_code=400, detail="Marca não encontrada ou inativa")
+
     produto = Product(
         loja_id=payload.loja_id,
         usuario_vendedor_id=payload.usuario_vendedor_id,
         operador_cadastro_id=operador.id,
+        categoria_id=payload.categoria_id,
+        marca_id=payload.marca_id,
         nome=payload.nome.strip(),
         descricao=payload.descricao,
-        categoria=payload.categoria,
         estado_conservacao=payload.estado_conservacao,
         status="RECEBIDO",
     )
