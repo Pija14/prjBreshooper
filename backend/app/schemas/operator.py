@@ -2,16 +2,16 @@ from pydantic import BaseModel, ConfigDict
 
 
 class OperatorCreate(BaseModel):
-    store_id: int
-    user_id: int
-    role: str = "OPERATOR"
+    loja_id: int
+    usuario_id: int
+    perfil: str = "OPERADOR"
 
 
 class OperatorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    store_id: int
-    user_id: int
-    role: str
+    loja_id: int
+    usuario_id: int
+    perfil: str
     status: str
