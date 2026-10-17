@@ -7,7 +7,7 @@ from app.database.session import SessionLocal
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse
 
-router = APIRouter(prefix="/api/users", tags=["Users"])
+router = APIRouter(prefix="/api/users", tags=["Usuários"])
 
 
 def get_db():
@@ -18,12 +18,12 @@ def get_db():
         db.close()
 
 
-@router.get("", response_model=list[UserResponse])
+@router.get("", response_model=list[UserResponse], summary="Listar usuários", description="Retorna todos os usuários cadastrados no Beeshopper.")
 def list_users(db: Session = Depends(get_db)):
     return db.scalars(select(User).order_by(User.id)).all()
 
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}", response_model=UserResponse, summary="Consultar usuário", description="Retorna os dados de um usuário específico pelo identificador.")
 def get_user(user_id: int, db: Session = Depends(get_db)):
     user = db.get(User, user_id)
     if not user:
@@ -31,7 +31,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return user
 
 
-@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED, summary="Cadastrar usuário", description="Cadastra uma pessoa no Beeshopper. O usuário pode atuar como comprador e/ou vendedor; esses papéis surgem conforme as operações realizadas.")
 def create_user(payload: UserCreate, db: Session = Depends(get_db)):
     name = payload.name.strip()
     email = str(payload.email).strip().lower()
