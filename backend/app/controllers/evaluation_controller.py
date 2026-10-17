@@ -9,7 +9,7 @@ from app.models.operator import Operator
 from app.models.product import Product
 from app.schemas.evaluation import EvaluationCreate, EvaluationResponse
 
-router = APIRouter(prefix="/api/evaluations", tags=["Avaliações"])
+router = APIRouter(prefix="/api/avaliacoes", tags=["Avaliações"])
 
 
 def get_db():
@@ -20,57 +20,57 @@ def get_db():
         db.close()
 
 
-@router.get("", response_model=list[EvaluationResponse], summary="Listar avaliações", description="Retorna as avaliações registradas. Pode filtrar as avaliações pelo produto.")
-def list_evaluations(product_id: int | None = None, db: Session = Depends(get_db)):
+@router.get("", response_model=list[EvaluationResponse], summary="Listar avaliações", description="Retorna as avaliações registradas para os produtos do Beeshopper.")
+def list_evaluations(produto_id: int | None = None, db: Session = Depends(get_db)):
     query = select(Evaluation).order_by(Evaluation.id)
-    if product_id is not None:
-        query = query.where(Evaluation.product_id == product_id)
+    if produto_id is not None:
+        query = query.where(Evaluation.produto_id == produto_id)
     return db.scalars(query).all()
 
 
-@router.post("", response_model=EvaluationResponse, status_code=status.HTTP_201_CREATED, summary="Avaliar produto", description="Registra a avaliação de um produto recebido pela loja. Somente um operador ativo da loja responsável pelo produto pode avaliar. A avaliação define o valor de venda e a divisão entre usuário e loja; a soma das duas partes deve ser igual ao valor de venda.")
+@router.post("", response_model=EvaluationResponse, status_code=status.HTTP_201_CREATED, summary="Avaliar produto", description="Registra a avaliação de um produto. O operador deve pertencer à loja do produto. A avaliação define o valor de venda e a divisão entre usuário e loja.")
 def create_evaluation(
     payload: EvaluationCreate,
-    operator_id: int,
+    operador_id: int,
     db: Session = Depends(get_db),
 ):
-    operator = db.get(Operator, operator_id)
-    if not operator or operator.status != "ACTIVE":
+    operador = db.get(Operator, operador_id)
+    if not operador or operador.status != "ATIVO":
         raise HTTPException(status_code=403, detail="Operador não autorizado")
 
-    product = db.get(Product, payload.product_id)
-    if not product:
+    produto = db.get(Product, payload.produto_id)
+    if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
 
-    if product.store_id != operator.store_id:
+    if produto.loja_id != operador.loja_id:
         raise HTTPException(status_code=403, detail="Operador não pertence à loja do produto")
 
-    if product.status != "RECEIVED":
+    if produto.status != "RECEBIDO":
         raise HTTPException(status_code=400, detail="Produto não está disponível para avaliação")
 
     existing = db.scalar(
-        select(Evaluation).where(Evaluation.product_id == product.id)
+        select(Evaluation).where(Evaluation.produto_id == produto.id)
     )
     if existing:
         raise HTTPException(status_code=409, detail="Produto já possui uma avaliação")
 
-    evaluation = Evaluation(
-        product_id=product.id,
-        evaluated_by_operator_id=operator.id,
-        sale_price=payload.sale_price,
-        seller_amount=payload.seller_amount,
-        store_amount=payload.store_amount,
+    avaliacao = Evaluation(
+        produto_id=produto.id,
+        avaliado_por_operador_id=operador.id,
+        valor_venda=payload.valor_venda,
+        valor_usuario=payload.valor_usuario,
+        valor_loja=payload.valor_loja,
         status="APROVADA",
     )
-    product.sale_price = payload.sale_price
-    product.status = "DISPONIVEL"
-    db.add(evaluation)
+    produto.valor_venda = payload.valor_venda
+    produto.status = "DISPONIVEL"
+    db.add(avaliacao)
 
     try:
         db.commit()
-        db.refresh(evaluation)
+        db.refresh(avaliacao)
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Não foi possível registrar a avaliação")
 
-    return evaluation
+    return avaliacao
