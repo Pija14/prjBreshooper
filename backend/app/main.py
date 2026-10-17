@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from app.controllers.health_controller import router as health_router
 from app.controllers.store_controller import router as store_router
 from app.controllers.user_controller import router as user_router
-from app.controllers.store_user_controller import router as store_user_router
+from app.controllers.operator_controller import router as operator_router
 
 app = FastAPI(
     title="Breshopper API",
@@ -14,4 +14,4 @@ app = FastAPI(
 app.include_router(health_router)
 app.include_router(store_router)
 app.include_router(user_router)
-app.include_router(store_user_router)
+app.include_router(operator_router)
