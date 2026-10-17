@@ -215,9 +215,11 @@ Existe um frontend web em HTML/CSS/JavaScript, publicado no GitHub Pages:
 
 https://pija14.github.io/prjBreshooper/
 
-A primeira tela de login já está disponível visualmente.
+O frontend segue o Material Design 3 com identidade própria (marca "sacola com setas de reuso", paleta terracota gerada a partir da cor-semente `#c2410c`, temas claro e escuro).
 
-O botão de login com Google ainda é apenas uma preparação da interface; o OAuth/OIDC real ainda não foi integrado.
+O login com Google está integrado de ponta a ponta: o botão oficial do Google Identity Services entrega o ID token ao backend, que o valida (assinatura, audiência, emissor, validade e e-mail verificado), cria ou localiza o usuário e emite um token de sessão (JWT). A primeira área autenticada exibe saudação, saldo (ainda R$ 0,00), as próximas ações marcadas como "Em breve" e as lojas em que o usuário é operador.
+
+Ainda não implementado: proteção por token dos endpoints administrativos existentes (produtos, avaliações, cadastros), que continuam recebendo `operador_id` como parâmetro.
 
 ### Estrutura funcional já construída
 
@@ -230,7 +232,9 @@ O botão de login com Google ainda é apenas uma preparação da interface; o OA
 - [x] Avaliações
 - [x] Documentação básica do Swagger em português
 - [x] Frontend inicial
-- [x] Tela de login visual
+- [x] Login com Google (validação no backend + sessão JWT)
+- [x] Área autenticada inicial (saudação, saldo, ações em breve, lojas do operador)
+- [x] Identidade visual e PWA (ícones, manifesto, service worker)
 - [x] Publicação do frontend no GitHub Pages
 - [x] Publicação da API no Render
 
@@ -277,7 +281,7 @@ A nomenclatura do domínio e dos JSONs da API deve permanecer em português.
 
 A partir do estado atual, o caminho recomendado é:
 
-### Fase 1 — Autenticação real
+### Fase 1 — Autenticação real *(login concluído; falta proteger os endpoints administrativos com o token)*
 
 Conectar a tela de login ao Google OAuth/OIDC.
 
