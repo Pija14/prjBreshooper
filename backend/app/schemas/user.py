@@ -1,21 +1,21 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserCreate(BaseModel):
-    name: str
+    nome: str = Field(min_length=1, max_length=150)
     email: EmailStr
-    google_sub: str | None = None
-    phone: str | None = None
-    avatar_url: str | None = None
+    identificador_google: str | None = None
+    telefone: str | None = None
+    url_avatar: str | None = None
 
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    google_sub: str | None
-    name: str
+    identificador_google: str | None
+    nome: str
     email: EmailStr
-    phone: str | None
-    avatar_url: str | None
-    status: bool
+    telefone: str | None
+    url_avatar: str | None
+    status: str
