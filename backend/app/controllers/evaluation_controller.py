@@ -9,7 +9,7 @@ from app.models.operator import Operator
 from app.models.product import Product
 from app.schemas.evaluation import EvaluationCreate, EvaluationResponse
 
-router = APIRouter(prefix="/api/evaluations", tags=["Evaluations"])
+router = APIRouter(prefix="/api/evaluations", tags=["Avaliações"])
 
 
 def get_db():
@@ -20,7 +20,7 @@ def get_db():
         db.close()
 
 
-@router.get("", response_model=list[EvaluationResponse])
+@router.get("", response_model=list[EvaluationResponse], summary="Listar avaliações", description="Retorna as avaliações registradas. Pode filtrar as avaliações pelo produto.")
 def list_evaluations(product_id: int | None = None, db: Session = Depends(get_db)):
     query = select(Evaluation).order_by(Evaluation.id)
     if product_id is not None:
@@ -28,7 +28,7 @@ def list_evaluations(product_id: int | None = None, db: Session = Depends(get_db
     return db.scalars(query).all()
 
 
-@router.post("", response_model=EvaluationResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=EvaluationResponse, status_code=status.HTTP_201_CREATED, summary="Avaliar produto", description="Registra a avaliação de um produto recebido pela loja. Somente um operador ativo da loja responsável pelo produto pode avaliar. A avaliação define o valor de venda e a divisão entre usuário e loja; a soma das duas partes deve ser igual ao valor de venda.")
 def create_evaluation(
     payload: EvaluationCreate,
     operator_id: int,
