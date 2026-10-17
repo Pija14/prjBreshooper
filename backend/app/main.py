@@ -10,7 +10,12 @@ from app.controllers.evaluation_controller import router as evaluation_router
 app = FastAPI(
     title="Breshopper API",
     version="0.1.0",
-    description="API do MVP Breshopper",
+    description=(
+        "API do MVP Breshopper. O sistema conecta usuários e lojas para "
+        "facilitar a compra e venda de produtos, com operação realizada "
+        "pelos operadores das lojas. O MVP controla usuários, lojas, "
+        "operadores, produtos e avaliações."
+    ),
 )
 
 app.include_router(health_router)
