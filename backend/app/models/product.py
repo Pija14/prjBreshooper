@@ -5,15 +5,15 @@ from app.models.base import Base
 
 
 class Product(Base):
-    __tablename__ = "products"
+    __tablename__ = "produtos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    store_id: Mapped[int] = mapped_column(ForeignKey("stores.id"), nullable=False)
-    seller_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    created_by_operator_id: Mapped[int] = mapped_column(ForeignKey("operators.id"), nullable=False)
-    name: Mapped[str] = mapped_column(String(150), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
-    category: Mapped[str | None] = mapped_column(String(100))
-    condition: Mapped[str | None] = mapped_column(String(50))
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="RECEIVED")
-    sale_price: Mapped[object | None] = mapped_column(Numeric(12, 2), nullable=True)
+    loja_id: Mapped[int] = mapped_column(ForeignKey("lojas.id"), nullable=False)
+    usuario_vendedor_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False)
+    operador_cadastro_id: Mapped[int] = mapped_column(ForeignKey("operadores.id"), nullable=False)
+    nome: Mapped[str] = mapped_column(String(150), nullable=False)
+    descricao: Mapped[str | None] = mapped_column(Text)
+    categoria: Mapped[str | None] = mapped_column(String(100))
+    estado_conservacao: Mapped[str | None] = mapped_column(String(50))
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="RECEBIDO")
+    valor_venda: Mapped[object | None] = mapped_column(Numeric(12, 2), nullable=True)
