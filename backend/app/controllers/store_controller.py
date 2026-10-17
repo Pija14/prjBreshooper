@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.database.session import SessionLocal
 from app.models.store import Store
-from app.schemas.store import StoreCreate, StoreResponse
+from app.schemas.loja import LojaCreate, LojaResponse
 
-router = APIRouter(prefix="/api/stores", tags=["Lojas"])
+router = APIRouter(prefix="/api/lojas", tags=["Lojas"])
 
 
 def get_db():
@@ -18,40 +18,40 @@ def get_db():
         db.close()
 
 
-@router.get("", response_model=list[StoreResponse], summary="Listar lojas", description="Retorna todas as lojas cadastradas no Beeshopper.")
+@router.get("", response_model=list[LojaResponse], summary="Listar lojas", description="Retorna todas as lojas cadastradas no Beeshopper.")
 def list_stores(db: Session = Depends(get_db)):
     return db.scalars(select(Store).order_by(Store.id)).all()
 
 
-@router.get("/{store_id}", response_model=StoreResponse, summary="Consultar loja", description="Retorna os dados de uma loja específica pelo identificador.")
-def get_store(store_id: int, db: Session = Depends(get_db)):
-    store = db.get(Store, store_id)
-    if not store:
+@router.get("/{loja_id}", response_model=LojaResponse, summary="Consultar loja", description="Retorna os dados de uma loja específica pelo identificador.")
+def get_store(loja_id: int, db: Session = Depends(get_db)):
+    loja = db.get(Store, loja_id)
+    if not loja:
         raise HTTPException(status_code=404, detail="Loja não encontrada")
-    return store
+    return loja
 
 
-@router.post("", response_model=StoreResponse, status_code=status.HTTP_201_CREATED, summary="Cadastrar loja", description="Cadastra uma loja parceira que poderá receber produtos e realizar operações de venda no Beeshopper.")
-def create_store(payload: StoreCreate, db: Session = Depends(get_db)):
-    name = payload.name.strip()
-    document = payload.document.strip() if payload.document else None
+@router.post("", response_model=LojaResponse, status_code=status.HTTP_201_CREATED, summary="Cadastrar loja", description="Cadastra uma loja parceira que poderá receber produtos e realizar operações de venda no Beeshopper.")
+def create_store(payload: LojaCreate, db: Session = Depends(get_db)):
+    nome = payload.nome.strip()
+    documento = payload.documento.strip() if payload.documento else None
 
-    if not name:
+    if not nome:
         raise HTTPException(status_code=400, detail="Nome da loja é obrigatório")
 
-    if document:
-        existing = db.scalar(select(Store).where(Store.document == document))
+    if documento:
+        existing = db.scalar(select(Store).where(Store.documento == documento))
         if existing:
             raise HTTPException(status_code=409, detail="Já existe uma loja com este documento")
 
-    store = Store(name=name, document=document, status=True)
-    db.add(store)
+    loja = Store(nome=nome, documento=documento, status="ATIVO")
+    db.add(loja)
 
     try:
         db.commit()
-        db.refresh(store)
+        db.refresh(loja)
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Não foi possível cadastrar a loja")
 
-    return store
+    return loja
