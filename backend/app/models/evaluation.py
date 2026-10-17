@@ -5,17 +5,17 @@ from app.models.base import Base
 
 
 class Evaluation(Base):
-    __tablename__ = "evaluations"
+    __tablename__ = "avaliacoes"
     __table_args__ = (
-        UniqueConstraint("product_id", name="uq_evaluations_product"),
+        UniqueConstraint("produto_id", name="uq_avaliacoes_produto"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
-    evaluated_by_operator_id: Mapped[int] = mapped_column(
-        ForeignKey("operators.id"), nullable=False
+    produto_id: Mapped[int] = mapped_column(ForeignKey("produtos.id"), nullable=False)
+    avaliado_por_operador_id: Mapped[int] = mapped_column(
+        ForeignKey("operadores.id"), nullable=False
     )
-    sale_price: Mapped[object] = mapped_column(Numeric(12, 2), nullable=False)
-    seller_amount: Mapped[object] = mapped_column(Numeric(12, 2), nullable=False)
-    store_amount: Mapped[object] = mapped_column(Numeric(12, 2), nullable=False)
+    valor_venda: Mapped[object] = mapped_column(Numeric(12, 2), nullable=False)
+    valor_usuario: Mapped[object] = mapped_column(Numeric(12, 2), nullable=False)
+    valor_loja: Mapped[object] = mapped_column(Numeric(12, 2), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="APROVADA")
