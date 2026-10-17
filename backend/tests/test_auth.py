@@ -151,3 +151,12 @@ def test_login_desabilitado_sem_client_id(client, monkeypatch):
 def test_cors_libera_github_pages(client):
     r = client.options("/api/auth/google/config", headers={"Origin": "https://pija14.github.io", "Access-Control-Request-Method": "GET"})
     assert r.headers.get("access-control-allow-origin") == "https://pija14.github.io"
+
+
+def test_configuracao_ignora_espacos_e_quebras_de_linha(monkeypatch):
+    from app.config import Settings
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "  cliente.apps.googleusercontent.com\n")
+    monkeypatch.setenv("JWT_SECRET", "\n" + "s" * 40 + "  \n")
+    config = Settings()
+    assert config.google_client_id == "cliente.apps.googleusercontent.com"
+    assert config.jwt_secret == "s" * 40
