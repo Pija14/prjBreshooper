@@ -10,7 +10,7 @@ from app.models.store import Store
 from app.models.user import User
 from app.schemas.product import ProductCreate, ProductResponse
 
-router = APIRouter(prefix="/api/products", tags=["Products"])
+router = APIRouter(prefix="/api/products", tags=["Produtos"])
 
 
 def get_db():
@@ -21,7 +21,7 @@ def get_db():
         db.close()
 
 
-@router.get("", response_model=list[ProductResponse])
+@router.get("", response_model=list[ProductResponse], summary="Listar produtos", description="Retorna os produtos cadastrados no Beeshopper. Pode filtrar os produtos por loja.")
 def list_products(store_id: int | None = None, db: Session = Depends(get_db)):
     query = select(Product).order_by(Product.id)
     if store_id is not None:
@@ -29,7 +29,7 @@ def list_products(store_id: int | None = None, db: Session = Depends(get_db)):
     return db.scalars(query).all()
 
 
-@router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED, summary="Cadastrar produto", description="Cadastra um produto recebido pela loja. Somente um operador ativo da própria loja pode realizar o cadastro. O produto fica vinculado ao usuário proprietário, à loja e ao operador responsável pelo cadastro.")
 def create_product(
     payload: ProductCreate,
     operator_id: int,
