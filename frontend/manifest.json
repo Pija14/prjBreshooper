@@ -1,3 +1,20 @@
 {
-  "name":"Breshopper","short_name":"Breshopper","start_url":"/","display":"standalone","background_color":"#FFFBFE","theme_color":"#6750A4","lang":"pt-BR"
+  "name": "Breshopper",
+  "short_name": "Breshopper",
+  "description": "Compre e venda produtos seminovos com lojas parceiras e transforme sua venda em crédito.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fceae5",
+  "theme_color": "#fceae5",
+  "lang": "pt-BR",
+  "categories": ["shopping", "lifestyle", "finance"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
 }
