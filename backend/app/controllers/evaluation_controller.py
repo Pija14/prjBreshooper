@@ -60,10 +60,10 @@ def create_evaluation(
         sale_price=payload.sale_price,
         seller_amount=payload.seller_amount,
         store_amount=payload.store_amount,
-        status="APPROVED",
+        status="APROVADA",
     )
     product.sale_price = payload.sale_price
-    product.status = "AVAILABLE"
+    product.status = "DISPONIVEL"
     db.add(evaluation)
 
     try:
