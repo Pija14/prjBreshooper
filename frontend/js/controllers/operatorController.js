@@ -12,7 +12,7 @@ import {
 import { bannerView } from "../views/authViews.js";
 import { centsToDecimalString, esc, formatBRL, formatCents, icon, openDialog, parseBRLToCents, showSnackbar } from "../views/ui.js";
 
-const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "" };
+const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "", expandedId: null };
 
 function byId(list) { return new Map((list || []).map(x => [x.id, x])); }
 
@@ -84,7 +84,7 @@ function go(hash) {
 function showDashboard() {
   const all = items();
   const counts = all.reduce((acc, i) => ({ ...acc, [i.produto.status]: (acc[i.produto.status] || 0) + 1 }), {});
-  paint(storeDashboardView({ usuario: state.session.usuario, loja: state.loja, counts, filter: state.filter, items: all }));
+  paint(storeDashboardView({ usuario: state.session.usuario, loja: state.loja, counts, filter: state.filter, items: all, expandedId: state.expandedId }));
   document.title = `${state.loja.loja_nome} · Breshopper`;
 }
 
@@ -343,8 +343,28 @@ export function switchStore(button) {
 
 window.addEventListener("hashchange", () => { if (state.app?.querySelector(".store-shell")) route(); });
 
+// Abre/fecha a divisão de valores do card, mantendo a rolagem e o foco no card.
+function toggleDetails(card, event) {
+  if (event?.target.closest?.(".product-details")) return;
+  const id = Number(card.dataset.id);
+  state.expandedId = state.expandedId === id ? null : id;
+  const y = window.scrollY;
+  showDashboard();
+  window.scrollTo(0, y);
+  document.querySelector(`[data-action="toggle-details"][data-id="${id}"] .product-main`)?.focus({ preventScroll: true });
+}
+
+// Teclado: Enter/Espaço no card expansível.
+document.addEventListener("keydown", event => {
+  if ((event.key === "Enter" || event.key === " ") && event.target.matches?.(".product-main[role=button]")) {
+    event.preventDefault();
+    toggleDetails(event.target.closest('[data-action="toggle-details"]'));
+  }
+});
+
 export const operatorActions = {
-  filter: button => { state.filter = button.dataset.filter; showDashboard(); },
+  filter: button => { state.filter = button.dataset.filter; state.expandedId = null; showDashboard(); },
+  "toggle-details": toggleDetails,
   "go-receive": () => go("#/receber"),
   "go-dashboard": () => go("#/"),
   evaluate: button => go(`#/avaliar/${button.dataset.id}`),

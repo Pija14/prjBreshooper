@@ -35,7 +35,24 @@ function statusChip(status) {
   return `<span class="status-chip status-${s.tone}">${esc(s.label)}</span>`;
 }
 
-export function productItemView(p, { vendedor, categoria, marca, comprador }) {
+const toCents = value => Math.round(Number(value) * 100);
+const DATA_HORA = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+// Detalhes do card (disponível ou vendido): divisão entre vendedor e loja; na venda, também referência e data.
+function productDetailsView({ avaliacao, venda, comprador }) {
+  const base = venda || avaliacao;
+  if (!base) return `<p class="split-empty">Divisão não encontrada para este produto.</p>`;
+  const split = { venda: toCents(base.valor_venda), cliente: toCents(base.valor_usuario), loja: toCents(base.valor_loja) };
+  return `
+    ${splitPreviewView(split, { clienteLabel: "Vendedor" })}
+    ${venda ? `<dl class="sale-meta">
+      <div><dt>Comprador</dt><dd>${esc(comprador?.nome || "—")}</dd></div>
+      <div><dt>Referência</dt><dd>${esc(venda.referencia)}</dd></div>
+      <div><dt>Data</dt><dd>${esc(DATA_HORA.format(new Date(venda.data_hora)))}</dd></div>
+    </dl>` : ""}`;
+}
+
+export function productItemView(p, { vendedor, categoria, marca, comprador, avaliacao, venda, expanded = false }) {
   const meta = [marca?.nome, categoria?.nome, p.estado_conservacao].filter(Boolean).join(" · ");
   const price = p.valor_venda != null ? `<strong class="product-price">${formatBRL(p.valor_venda)}</strong>` : "";
   const trailing = p.status === "RECEBIDO"
@@ -43,8 +60,11 @@ export function productItemView(p, { vendedor, categoria, marca, comprador }) {
     : p.status === "DISPONIVEL"
       ? `<span class="product-trailing">${price}<button class="tonal-button state-layer" data-action="sell" data-id="${p.id}">Vender</button></span>`
       : price;
+  const expandable = p.status === "DISPONIVEL" || p.status === "VENDIDO";
+  const toggle = expandable ? ` data-action="toggle-details" data-id="${p.id}"` : "";
   return `
-    <article class="list-item product-item">
+    <article class="list-item product-item${expandable ? " is-expandable" : ""}${expanded ? " is-expanded" : ""}"${toggle}>
+      <div class="product-main"${expandable ? ` role="button" tabindex="0" aria-expanded="${expanded}" aria-controls="details-${p.id}" aria-label="${esc(p.nome)}: ${expanded ? "ocultar" : "ver"} divisão de valores"` : ""}>
       <span class="list-icon">${icon(p.status === "VENDIDO" ? "sold" : p.status === "DISPONIVEL" ? "sell" : "hourglass")}</span>
       <span class="list-text">
         <strong>${esc(p.nome)}</strong>
@@ -53,11 +73,14 @@ export function productItemView(p, { vendedor, categoria, marca, comprador }) {
         ${comprador ? `<span class="product-seller">${icon("shoppingBag", "icon icon-sm")}Comprado por ${esc(comprador.nome)}</span>` : ""}
         ${statusChip(p.status)}
       </span>
+      </div>
       ${trailing}
+      ${expandable ? `<span class="expand-icon" aria-hidden="true">${icon("expand")}</span>` : ""}
+      ${expanded ? `<div class="product-details" id="details-${p.id}">${productDetailsView({ avaliacao, venda, comprador })}</div>` : ""}
     </article>`;
 }
 
-export function storeDashboardView({ usuario, loja, counts, filter, items }) {
+export function storeDashboardView({ usuario, loja, counts, filter, items, expandedId = null }) {
   const filtered = filter === "TODOS" ? items : items.filter(i => i.produto.status === filter);
   const empty = {
     RECEBIDO: ["Nenhum produto aguardando avaliação", "Quando um cliente entregar um produto, registre-o em Receber produto."],
@@ -86,7 +109,7 @@ export function storeDashboardView({ usuario, loja, counts, filter, items }) {
       </div>
 
       ${filtered.length
-        ? `<section class="list" aria-label="Produtos">${filtered.map(i => productItemView(i.produto, i)).join("")}</section>`
+        ? `<section class="list" aria-label="Produtos">${filtered.map(i => productItemView(i.produto, { ...i, expanded: i.produto.id === expandedId })).join("")}</section>`
         : `<div class="empty-state"><span class="empty-icon">${icon("receive")}</span><strong>${empty[0]}</strong><span>${empty[1]}</span></div>`}
     </main>
     <button class="fab state-layer" data-action="go-receive">${icon("receive")}<span>Receber produto</span></button>`;
@@ -184,13 +207,13 @@ export function evaluateProductView({ produto, vendedor, categoria, marca }) {
 }
 
 // Resumo da divisão: cliente + loja = venda (a parte da loja é sempre o restante).
-export function splitPreviewView(split) {
+export function splitPreviewView(split, { clienteLabel = "Cliente" } = {}) {
   if (!split) return `<p class="split-empty">Informe o valor de venda e a parte do cliente para ver a divisão.</p>`;
   const pct = split.venda ? Math.round((split.cliente / split.venda) * 100) : 0;
   return `
     <div class="split-bar" aria-hidden="true"><span style="width:${pct}%"></span></div>
     <dl class="split-values">
-      <div><dt><span class="dot dot-client"></span>Cliente</dt><dd><strong>${formatCents(split.cliente)}</strong><small>${pct}%</small></dd></div>
+      <div><dt><span class="dot dot-client"></span>${clienteLabel}</dt><dd><strong>${formatCents(split.cliente)}</strong><small>${pct}%</small></dd></div>
       <div><dt><span class="dot dot-store"></span>Loja</dt><dd><strong>${formatCents(split.loja)}</strong><small>${100 - pct}%</small></dd></div>
       <div class="split-total"><dt>Valor de venda</dt><dd><strong>${formatCents(split.venda)}</strong></dd></div>
     </dl>`;
