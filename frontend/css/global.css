@@ -410,21 +410,32 @@ h1, h2, h3, p { margin: 0; overflow-wrap: anywhere; }
   box-shadow: var(--elevation-2); font-size: 14px; font-weight: 500; letter-spacing: .1px;
 }
 
-/* ---------- Abas da loja ---------- */
-.tabs {
-  position: sticky; top: calc(64px + env(safe-area-inset-top)); z-index: 4;
-  display: grid; grid-template-columns: 1fr 1fr;
-  background: var(--md-sys-color-surface); border-bottom: 1px solid var(--md-sys-color-outline-variant);
+/* ---------- Barra de navegação (rodapé) ---------- */
+.nav-bar {
+  position: fixed; z-index: 20; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: min(100%, 720px); display: grid; grid-template-columns: repeat(2, 1fr);
+  padding: 12px 0 max(16px, env(safe-area-inset-bottom));
+  background: var(--md-sys-color-surface-container); box-shadow: 0 -1px 0 var(--md-sys-color-outline-variant);
 }
-.tab {
-  position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px;
-  color: var(--md-sys-color-on-surface-variant); text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: .1px;
+.nav-item {
+  display: grid; justify-items: center; gap: 4px; min-height: 52px;
+  color: var(--md-sys-color-on-surface-variant); text-decoration: none; -webkit-tap-highlight-color: transparent;
 }
-.tab.is-active { color: var(--md-sys-color-primary); }
-.tab.is-active::before {
-  content: ""; position: absolute; left: 50%; bottom: 0; width: 64px; height: 3px; transform: translateX(-50%);
-  border-radius: 3px 3px 0 0; background: var(--md-sys-color-primary);
+.nav-indicator {
+  width: 64px; height: 32px; display: grid; place-items: center; border-radius: var(--shape-full);
+  transition: background var(--duration-short);
 }
+.nav-label { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: .5px; }
+.nav-item.is-active { color: var(--md-sys-color-on-surface); }
+.nav-item.is-active .nav-indicator { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+.nav-item.is-active .nav-label { font-weight: 700; }
+@media (hover: hover) { .nav-item:hover .nav-indicator::after { opacity: var(--state-hover); } }
+.nav-item:focus-visible { outline: none; }
+.nav-item:focus-visible .nav-indicator { outline: 3px solid var(--md-sys-color-secondary); outline-offset: 2px; }
+.store-page.has-nav { padding-bottom: calc(184px + env(safe-area-inset-bottom)); }
+body:has(.nav-bar) .fab { bottom: calc(96px + env(safe-area-inset-bottom)); }
+body:has(.nav-bar) .snackbar { bottom: calc(96px + env(safe-area-inset-bottom)); }
+body:has(.nav-bar):has(.fab) .snackbar { bottom: calc(168px + env(safe-area-inset-bottom)); }
 .store-page { padding-top: 16px; }
 
 /* ---------- Financeiro ---------- */
@@ -531,7 +542,8 @@ textarea.input { min-height: 96px; resize: vertical; }
 }
 
 /* ---------- Camadas de estado (M3) ---------- */
-.state-layer { position: relative; }
+/* :where() = especificidade zero, para não anular o position de componentes fixos (ex.: .fab). */
+:where(.state-layer) { position: relative; }
 .state-layer::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit;
   background: currentColor; opacity: 0; pointer-events: none;

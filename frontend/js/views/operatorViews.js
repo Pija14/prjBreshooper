@@ -80,13 +80,15 @@ export function productItemView(p, { vendedor, categoria, marca, comprador, aval
     </article>`;
 }
 
-// Abas principais da Área da loja.
-export function storeTabsView(active) {
-  const tabs = [["produtos", "#/", "inventory", "Produtos"], ["financeiro", "#/financeiro", "wallet", "Financeiro"]];
+// Barra de navegação (M3) fixa no rodapé da Área da loja.
+export function storeNavView(active) {
+  const items = [["produtos", "#/", "inventory", "Produtos"], ["financeiro", "#/financeiro", "wallet", "Financeiro"]];
   return `
-    <nav class="tabs" aria-label="Seções da loja">
-      ${tabs.map(([id, href, ic, label]) => `
-        <a class="tab state-layer${active === id ? " is-active" : ""}" href="${href}"${active === id ? ' aria-current="page"' : ""}>${icon(ic, "icon icon-sm")}<span>${label}</span></a>`).join("")}
+    <nav class="nav-bar" aria-label="Seções da loja">
+      ${items.map(([id, href, ic, label]) => `
+        <a class="nav-item${active === id ? " is-active" : ""}" href="${href}"${active === id ? ' aria-current="page"' : ""}>
+          <span class="nav-indicator state-layer">${icon(ic)}</span><span class="nav-label">${label}</span>
+        </a>`).join("")}
     </nav>`;
 }
 
@@ -99,8 +101,7 @@ export function storeDashboardView({ usuario, loja, counts, filter, items, expan
     TODOS: ["Nenhum produto nesta loja", "Comece registrando o primeiro produto recebido."],
   }[filter];
   return `
-    ${storeTabsView("produtos")}
-    <main class="page store-page">
+    <main class="page store-page has-nav">
       <header class="greeting">
         <p>Olá, ${esc(firstName(usuario?.nome))} · ${esc(PERFIS[loja.perfil] || loja.perfil)}</p>
         <h1>Produtos da loja</h1>
@@ -123,7 +124,8 @@ export function storeDashboardView({ usuario, loja, counts, filter, items, expan
         ? `<section class="list" aria-label="Produtos">${filtered.map(i => productItemView(i.produto, { ...i, expanded: i.produto.id === expandedId })).join("")}</section>`
         : `<div class="empty-state"><span class="empty-icon">${icon("receive")}</span><strong>${empty[0]}</strong><span>${empty[1]}</span></div>`}
     </main>
-    <button class="fab state-layer" data-action="go-receive">${icon("receive")}<span>Receber produto</span></button>`;
+    <button class="fab state-layer" data-action="go-receive">${icon("receive")}<span>Receber produto</span></button>
+    ${storeNavView("produtos")}`;
 }
 
 function field({ id, label, control, hint = "" }) {

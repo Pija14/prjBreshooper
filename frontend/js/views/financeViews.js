@@ -1,7 +1,7 @@
 // Views financeiras: aba Financeiro da loja e extrato da conta corrente do cliente.
 import { PERIODS } from "../services/finance.js";
 import { esc, formatBRL, icon } from "./ui.js";
-import { splitPreviewView, storeTabsView } from "./operatorViews.js";
+import { splitPreviewView, storeNavView } from "./operatorViews.js";
 
 const DATA = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 const DATA_HORA = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -71,12 +71,12 @@ export function storeFinanceView({ period, data, error }) {
       </section>`;
   }
   return `
-    ${storeTabsView("financeiro")}
-    <main class="page store-page">
+    <main class="page store-page has-nav">
       <header class="greeting"><p>Vendas, receita e repasses</p><h1>Financeiro</h1></header>
       ${periodChips(period)}
       ${body}
-    </main>`;
+    </main>
+    ${storeNavView("financeiro")}`;
 }
 
 // ---------- Cliente: saldo e extrato ----------
