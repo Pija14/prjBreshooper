@@ -244,6 +244,7 @@ Ainda não implementado: proteção por token dos endpoints administrativos exis
 - [x] Área autenticada inicial (saudação, saldo, ações em breve, lojas do operador)
 - [x] Área da loja para operadores (painel, receber produto, avaliar, vender)
 - [x] Vendas (`POST /api/vendas`)
+- [x] Conta corrente do usuário (crédito na venda, saldo e extrato) e financeiro da loja
 - [x] Identidade visual e PWA (ícones, manifesto, service worker)
 - [x] Publicação do frontend no GitHub Pages
 - [x] Publicação da API no Render
@@ -392,7 +393,7 @@ O MVP pode começar com um catálogo simples, com filtros básicos por:
 
 ### Fase 6 — Venda ✅ implementada
 
-Implementada na tabela `vendas` e no endpoint `POST /api/vendas?operador_id=` (corpo: `produto_id`, `usuario_comprador_id`). Regras: operador ativo da loja do produto; produto `DISPONIVEL` com avaliação `APROVADA`; comprador ativo, diferente do vendedor e que não seja operador de loja; uma venda por produto. Os valores (`valor_venda`, `valor_usuario`, `valor_loja`) são copiados da avaliação, a venda nasce `CONCLUIDA` com `referencia` única (`VND-XXXXXXXXXX`) e `data_hora`, e o produto passa a `VENDIDO`. O crédito do vendedor fica para a Fase 7.
+Implementada na tabela `vendas` e no endpoint `POST /api/vendas?operador_id=` (corpo: `produto_id`, `usuario_comprador_id`). Regras: operador ativo da loja do produto; produto `DISPONIVEL` com avaliação `APROVADA`; comprador ativo, diferente do vendedor e que não seja operador de loja; uma venda por produto. Os valores (`valor_venda`, `valor_usuario`, `valor_loja`) são copiados da avaliação, a venda nasce `CONCLUIDA` com `referencia` única (`VND-XXXXXXXXXX`) e `data_hora`, e o produto passa a `VENDIDO`. A parte do vendedor é creditada na conta corrente dele (Fase 7).
 
 Criar a entidade e o fluxo de venda.
 
@@ -420,7 +421,14 @@ PRODUTO VENDIDO
 
 ---
 
-### Fase 7 — Conta corrente do usuário
+### Fase 7 — Conta corrente do usuário ✅ implementada
+
+Implementada na tabela `movimentacoes` (lançamentos `CREDITO`/`DEBITO`, origem `VENDA`, status `CONCLUIDA`). Ao registrar a venda, na mesma transação, a parte do vendedor (`valor_usuario`) vira um crédito na conta dele; a migration `0008` também creditou as vendas registradas antes. Saldo = créditos − débitos.
+
+- `GET /api/conta-corrente` (token): saldo e extrato do usuário autenticado — exibidos na tela inicial do cliente.
+- `GET /api/lojas/{loja_id}/financeiro?de=&ate=` (token, somente operador ativo da loja): total vendido, receita da loja, valor creditado aos vendedores, totais por vendedor e lista de vendas — exibidos na aba **Financeiro** da Área da loja (períodos: este mês, últimos 30 dias, tudo).
+
+O crédito é liberado no momento da venda. Uso do saldo na loja e saque por PIX ficam para a Fase 8.
 
 Este é um dos pontos centrais do modelo de negócio.
 

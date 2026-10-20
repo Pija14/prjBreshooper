@@ -1,6 +1,7 @@
 // Controller da área autenticada: escolhe a área (loja ou cliente) e cuida do menu da conta.
 // Operadores atuam pela loja e não compram nem vendem: veem somente a área da loja.
 import { signOut } from "../services/auth.js";
+import { loadAccount } from "../services/finance.js";
 import { selectedStoreId } from "../services/store.js";
 import { accountMenuView, homeView } from "../views/homeView.js";
 import { renderStoreArea } from "./operatorController.js";
@@ -34,6 +35,11 @@ export function renderHome(app, session, { onLogout } = {}) {
   onSignedOut = onLogout || onSignedOut;
   if (session.lojas?.length) { renderStoreArea(app, session); return; }
   app.innerHTML = homeView(session);
+  // Saldo e extrato chegam depois; só redesenha se o cliente ainda estiver na tela inicial.
+  const shell = app.firstElementChild;
+  loadAccount()
+    .then(conta => ({ conta }), () => ({ contaErro: true }))
+    .then(state => { if (app.firstElementChild === shell && currentSession === session) app.innerHTML = homeView(session, state); });
 }
 
 export const homeActions = { "account-menu": toggleMenu, logout };

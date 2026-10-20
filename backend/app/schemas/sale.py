@@ -1,7 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict
+
+
+def _em_utc(valor: datetime) -> datetime:
+    # SQLite devolve datas sem fuso (gravadas em UTC); o navegador precisa do fuso para converter.
+    return valor.replace(tzinfo=timezone.utc) if valor.tzinfo is None else valor
+
+
+DataHoraUTC = Annotated[datetime, AfterValidator(_em_utc)]
 
 
 class SaleCreate(BaseModel):
@@ -22,4 +31,4 @@ class SaleResponse(BaseModel):
     valor_loja: Decimal
     status: str
     referencia: str
-    data_hora: datetime
+    data_hora: DataHoraUTC

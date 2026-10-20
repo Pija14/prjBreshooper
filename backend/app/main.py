@@ -12,6 +12,7 @@ from app.controllers.brand_controller import router as brand_router
 from app.controllers.product_controller import router as product_router
 from app.controllers.evaluation_controller import router as evaluation_router
 from app.controllers.sale_controller import router as sale_router
+from app.controllers.finance_controller import router as finance_router
 
 app = FastAPI(
     title="Breshopper API",
@@ -43,3 +44,4 @@ app.include_router(brand_router)
 app.include_router(product_router)
 app.include_router(evaluation_router)
 app.include_router(sale_router)
+app.include_router(finance_router)

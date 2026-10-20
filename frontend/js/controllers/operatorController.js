@@ -10,9 +10,12 @@ import {
   splitPreviewView, storeDashboardView, storeShellView,
 } from "../views/operatorViews.js";
 import { bannerView } from "../views/authViews.js";
+import { loadStoreFinance } from "../services/finance.js";
+import { storeFinanceView } from "../views/financeViews.js";
 import { centsToDecimalString, esc, formatBRL, formatCents, icon, openDialog, parseBRLToCents, showSnackbar } from "../views/ui.js";
 
-const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "", expandedId: null };
+const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "", expandedId: null,
+  finance: { period: "MES", data: null, error: null, request: 0 } };
 
 function byId(list) { return new Map((list || []).map(x => [x.id, x])); }
 
@@ -70,6 +73,7 @@ function route() {
   const hash = location.hash;
   const avaliar = hash.match(/^#\/avaliar\/(\d+)$/);
   const vender = hash.match(/^#\/vender\/(\d+)$/);
+  if (hash === "#/financeiro") return showFinance();
   if (hash === "#/receber") return showReceive();
   if (avaliar) return showEvaluate(Number(avaliar[1]));
   if (vender) return showSell(Number(vender[1]));
@@ -86,6 +90,24 @@ function showDashboard() {
   const counts = all.reduce((acc, i) => ({ ...acc, [i.produto.status]: (acc[i.produto.status] || 0) + 1 }), {});
   paint(storeDashboardView({ usuario: state.session.usuario, loja: state.loja, counts, filter: state.filter, items: all, expandedId: state.expandedId }));
   document.title = `${state.loja.loja_nome} · Breshopper`;
+}
+
+// ---------- Financeiro ----------
+async function showFinance() {
+  const f = state.finance;
+  const request = ++f.request;
+  f.data = null; f.error = null;
+  paint(storeFinanceView(f));
+  document.title = `Financeiro · ${state.loja.loja_nome}`;
+  try {
+    const data = await loadStoreFinance(state.loja.loja_id, f.period);
+    if (request !== f.request) return; // resposta de um período anterior
+    f.data = data;
+  } catch (err) {
+    if (request !== f.request) return;
+    f.error = errorText(err);
+  }
+  if (location.hash === "#/financeiro") paint(storeFinanceView(f));
 }
 
 // ---------- Receber produto ----------
@@ -365,6 +387,8 @@ document.addEventListener("keydown", event => {
 export const operatorActions = {
   filter: button => { state.filter = button.dataset.filter; state.expandedId = null; showDashboard(); },
   "toggle-details": toggleDetails,
+  "finance-period": button => { state.finance.period = button.dataset.period; showFinance(); },
+  "finance-reload": () => showFinance(),
   "go-receive": () => go("#/receber"),
   "go-dashboard": () => go("#/"),
   evaluate: button => go(`#/avaliar/${button.dataset.id}`),

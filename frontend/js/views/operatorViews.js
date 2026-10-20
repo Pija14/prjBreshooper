@@ -80,6 +80,16 @@ export function productItemView(p, { vendedor, categoria, marca, comprador, aval
     </article>`;
 }
 
+// Abas principais da Área da loja.
+export function storeTabsView(active) {
+  const tabs = [["produtos", "#/", "inventory", "Produtos"], ["financeiro", "#/financeiro", "wallet", "Financeiro"]];
+  return `
+    <nav class="tabs" aria-label="Seções da loja">
+      ${tabs.map(([id, href, ic, label]) => `
+        <a class="tab state-layer${active === id ? " is-active" : ""}" href="${href}"${active === id ? ' aria-current="page"' : ""}>${icon(ic, "icon icon-sm")}<span>${label}</span></a>`).join("")}
+    </nav>`;
+}
+
 export function storeDashboardView({ usuario, loja, counts, filter, items, expandedId = null }) {
   const filtered = filter === "TODOS" ? items : items.filter(i => i.produto.status === filter);
   const empty = {
@@ -89,6 +99,7 @@ export function storeDashboardView({ usuario, loja, counts, filter, items, expan
     TODOS: ["Nenhum produto nesta loja", "Comece registrando o primeiro produto recebido."],
   }[filter];
   return `
+    ${storeTabsView("produtos")}
     <main class="page store-page">
       <header class="greeting">
         <p>Olá, ${esc(firstName(usuario?.nome))} · ${esc(PERFIS[loja.perfil] || loja.perfil)}</p>

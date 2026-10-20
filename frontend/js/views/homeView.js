@@ -1,6 +1,7 @@
-// View da área autenticada inicial (Fase 2 do roadmap): saudação, saldo e próximas ações.
+// View da área do cliente: saudação, saldo da conta corrente, próximas ações e extrato.
 // As funções ainda não construídas aparecem como "Em breve" — sem números ou dados fictícios.
-import { avatarView, brandMark, esc, firstName, formatBRL, icon } from "./ui.js";
+import { avatarView, brandMark, esc, firstName, icon } from "./ui.js";
+import { balanceCardView, statementView } from "./financeViews.js";
 
 const PERFIS = { ADMINISTRADOR: "Administrador", OPERADOR: "Operador" };
 const DATA = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" });
@@ -16,7 +17,8 @@ const ACTIONS = [
   ["inventory", "Meus produtos", "Acompanhe seus produtos em loja"],
 ];
 
-export function homeView({ usuario, lojas = [] }) {
+// conta: resposta de /api/conta-corrente (undefined enquanto carrega); contaErro: falha ao carregar.
+export function homeView({ usuario, lojas = [] }, { conta, contaErro } = {}) {
   const date = DATA.format(new Date()).replace(/^./, c => c.toUpperCase());
   return `
     <div class="app-shell">
@@ -30,11 +32,7 @@ export function homeView({ usuario, lojas = [] }) {
           <h1>${greeting()}${firstName(usuario?.nome) ? `, ${esc(firstName(usuario.nome))}` : ""}</h1>
         </header>
 
-        <section class="balance-card" aria-labelledby="balanceLabel">
-          <span class="balance-label" id="balanceLabel">${icon("wallet")}Saldo disponível</span>
-          <strong class="balance-value">${formatBRL(0)}</strong>
-          <p class="balance-note">Quando um produto seu for vendido, a sua parte aparece aqui como crédito.</p>
-        </section>
+        ${balanceCardView(conta, contaErro)}
 
         <section aria-labelledby="actionsTitle">
           <h2 class="section-title" id="actionsTitle">O que você quer fazer?</h2>
@@ -48,6 +46,8 @@ export function homeView({ usuario, lojas = [] }) {
               </article>`).join("")}
           </div>
         </section>
+
+        ${statementView(conta)}
 
         ${lojas.length ? `
         <section aria-labelledby="storesTitle">

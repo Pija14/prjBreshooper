@@ -29,6 +29,7 @@ Uma pessoa entrega um produto usado a uma **loja parceira**; um **operador** da 
 1. **Não existe entidade "vendedor"** — o vendedor é um `usuario` (campo `usuario_vendedor_id` no produto).
 2. **Operador pertence a uma loja** e só opera produtos **da própria loja**, e somente se estiver `ATIVO`.
    - **Venda:** registrada pelo operador ativo da loja (`POST /api/vendas`) para um comprador ativo que não é o vendedor nem operador; valores copiados da avaliação; uma venda por produto.
+   - **Conta corrente:** a venda gera, na mesma transação, um crédito de `valor_usuario` para o vendedor (`movimentacoes`). Uso do saldo e PIX ainda não existem (Fase 8) — não invente regras.
    - **Operador não vende nem compra.** Um operador ativo nunca é `usuario_vendedor_id` de produto (a API retorna 400) e, no app, vê só a Área da loja — sem saldo e sem comprar/vender.
 3. **Produto exige categoria e marca por ID** (cadastros próprios, não texto livre).
 4. **Uma avaliação por produto** (restrição única `uq_avaliacoes_produto`).
@@ -44,6 +45,7 @@ Produto:    RECEBIDO ──(avaliação APROVADA pelo operador da loja)──►
                 └───────────────────────────────► CANCELADO
 Operador / Usuário / Loja / Categoria / Marca:  ATIVO ⇄ INATIVO
 Venda:      CONCLUIDA (registrada pelo operador da loja; produto passa a VENDIDO)
+Movimentação (conta corrente):  CREDITO na venda (parte do vendedor), status CONCLUIDA; saldo = créditos − débitos
 Status já previstos no domínio:  PENDENTE, APROVADA, CONCLUIDA (crédito — a especificar)
 ```
 

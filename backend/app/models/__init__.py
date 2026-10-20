@@ -6,3 +6,4 @@ from app.models.brand import Brand
 from app.models.product import Product
 from app.models.evaluation import Evaluation
 from app.models.sale import Sale
+from app.models.movement import Movement
