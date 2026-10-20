@@ -148,14 +148,22 @@ def _repasse_response(repasse: Payout, venda: Sale, produto: Product, vendedor: 
     return RepasseResponse(
         id=repasse.id, venda_id=venda.id, referencia=venda.referencia, venda_data_hora=venda.data_hora,
         produto_nome=produto.nome, usuario_id=vendedor.id, vendedor_nome=vendedor.nome, vendedor_email=vendedor.email,
-        valor=repasse.valor, valor_venda=venda.valor_venda, valor_loja=venda.valor_loja, status=repasse.status, forma_pagamento=repasse.forma_pagamento, pago_em=repasse.pago_em,
+        valor=repasse.valor, valor_venda=venda.valor_venda, valor_loja=venda.valor_loja, status=repasse.status,
+        data_referencia=data_referencia(repasse, venda), forma_pagamento=repasse.forma_pagamento, pago_em=repasse.pago_em,
     )
 
 
-@router.get("/api/lojas/{loja_id}/repasses", response_model=list[RepasseResponse], summary="Repasses aos vendedores", description="Despesas da loja: o que deve (PENDENTE) e o que já pagou (PAGO) a cada vendedor, uma linha por venda. Filtro opcional por status. Pendentes primeiro, do mais antigo ao mais novo; pagos do mais recente ao mais antigo. Somente operadores ativos da loja. Exige Authorization: Bearer <token>.")
+def data_referencia(repasse: Payout, venda: Sale) -> datetime:
+    """Data do lançamento no extrato de despesas: o pagamento, ou a venda enquanto está a pagar."""
+    return em_utc(repasse.pago_em if repasse.status == "PAGO" and repasse.pago_em else venda.data_hora)
+
+
+@router.get("/api/lojas/{loja_id}/repasses", response_model=list[RepasseResponse], summary="Repasses aos vendedores", description="Despesas da loja como extrato: o que deve (PENDENTE) e o que já pagou (PAGO) a cada vendedor, uma linha por venda, do mais recente ao mais antigo pela data de referência (data do pagamento; para os pendentes, data da venda). Filtros opcionais: status e período (de/ate em ISO 8601, aplicado à data de referência). Somente operadores ativos da loja. Exige Authorization: Bearer <token>.")
 def listar_repasses(
     loja_id: int,
     status: str | None = None,
+    de: datetime | None = None,
+    ate: datetime | None = None,
     usuario: User = Depends(usuario_autenticado),
     db: Session = Depends(get_db),
 ):
@@ -172,11 +180,12 @@ def listar_repasses(
     )
     if status is not None:
         query = query.where(Payout.status == status.strip().upper())
-    linhas = db.execute(query).all()
 
-    pendentes = sorted((l for l in linhas if l[0].status == "PENDENTE"), key=lambda l: (em_utc(l[1].data_hora), l[0].id))
-    pagos = sorted((l for l in linhas if l[0].status != "PENDENTE"), key=lambda l: (em_utc(l[0].pago_em or l[1].data_hora), l[0].id), reverse=True)
-    return [_repasse_response(*l) for l in pendentes + pagos]
+    inicio = em_utc(de) if de else None
+    fim = em_utc(ate) if ate else None
+    linhas = [l for l in db.execute(query).all() if no_periodo(data_referencia(l[0], l[1]), inicio, fim)]
+    linhas.sort(key=lambda l: (data_referencia(l[0], l[1]), l[0].id), reverse=True)
+    return [_repasse_response(*l) for l in linhas]
 
 
 @router.post("/api/repasses/{repasse_id}/pagamento", response_model=RepasseResponse, summary="Pagar vendedor", description="Registra o pagamento da parte do vendedor por PIX, CARTAO ou CREDITO_LOJA. Em CREDITO_LOJA o valor entra como crédito na carteira (conta corrente) do vendedor, na mesma transação; em PIX e CARTAO o pagamento é feito fora do Breshopper e só fica registrado. Um repasse só pode ser pago uma vez. Somente operadores ativos da loja. Exige Authorization: Bearer <token>.")

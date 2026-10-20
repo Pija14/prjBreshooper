@@ -434,10 +434,12 @@ Endpoints (todos exigem token; os da loja, operador ativo da loja):
 
 - `GET /api/conta-corrente` — saldo, extrato e `a_receber` (repasses pendentes do usuário). Tela inicial do cliente.
 - `GET /api/lojas/{loja_id}/financeiro?de=&ate=` — receitas (vendas), parte da loja e dos vendedores, pago aos vendedores (por forma) no período e **a pagar** (todos os pendentes, sem filtro de período).
-- `GET /api/lojas/{loja_id}/repasses?status=` — despesas: pendentes (mais antigos primeiro) e pagos.
+- `GET /api/lojas/{loja_id}/repasses?status=&de=&ate=` — despesas como extrato, do mais recente ao mais antigo pela `data_referencia` (data do pagamento; para os pendentes, data da venda).
 - `POST /api/repasses/{id}/pagamento` `{forma_pagamento}` — paga o vendedor.
 
 Na Área da loja o rodapé tem **Início** (resumo financeiro, tela inicial do operador), **Produtos**, **Receitas** (vendas do período) e **Despesas** (pagar vendedores: A pagar / Pagos / Todos).
+
+Receitas e Despesas funcionam como **extrato bancário**: lançamentos agrupados por dia (Hoje, Ontem, data), com o total de cada dia. Receitas mostram só a parte da loja; tocar num lançamento abre a divisão vendedor/loja. O período é compartilhado por Início, Receitas e Despesas: Hoje, 7 dias, Este mês, Mês passado, Tudo ou Personalizado (de/até, as duas datas inclusas).
 
 Uso do saldo na loja e saque por PIX pelo cliente ficam para a Fase 8.
 

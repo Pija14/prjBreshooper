@@ -11,11 +11,12 @@ import {
 } from "../views/operatorViews.js";
 import { bannerView } from "../views/authViews.js";
 import { loadPayouts, loadStoreFinance, payPayout } from "../services/finance.js";
-import { FORMAS, payDialogContent, storeExpensesView, storeHomeView, storeIncomeView } from "../views/financeViews.js";
+import { FORMAS, payDialogContent, periodDialogContent, storeExpensesView, storeHomeView, storeIncomeView } from "../views/financeViews.js";
 import { centsToDecimalString, esc, formatBRL, formatCents, icon, openDialog, parseBRLToCents, showSnackbar } from "../views/ui.js";
 
 const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "", expandedId: null,
-  finance: { period: "MES", data: null, error: null, request: 0 },
+  // Período compartilhado por Início, Receitas e Despesas (custom: { de, ate } em AAAA-MM-DD).
+  finance: { period: "MES", custom: null, data: null, error: null, request: 0 },
   expenses: { filter: "PENDENTE", list: null, error: null, request: 0 },
   incomeExpandedId: null, expenseExpandedId: null };
 
@@ -29,6 +30,11 @@ function errorText(err) {
 
 function paint(content) {
   state.app.innerHTML = storeShellView({ usuario: state.session.usuario, loja: state.loja, content });
+  // Linha de períodos com rolagem: mantém o chip selecionado visível (sem rolar a página).
+  const row = state.app.querySelector(".chip-scroll");
+  const chip = row?.querySelector(".is-selected");
+  const overflow = chip ? chip.getBoundingClientRect().right - row.getBoundingClientRect().right : 0;
+  if (overflow > 0) row.scrollLeft += overflow + 16;
 }
 
 function loadingView(text = "Carregando produtos da loja…") {
@@ -114,7 +120,7 @@ async function showFinance(view) {
   paintFinance(view);
   document.title = `${view === "inicio" ? "Início" : "Receitas"} · ${state.loja.loja_nome}`;
   try {
-    const data = await loadStoreFinance(state.loja.loja_id, f.period);
+    const data = await loadStoreFinance(state.loja.loja_id, f.period, f.custom);
     if (request !== f.request) return; // resposta de um período anterior
     f.data = data;
   } catch (err) {
@@ -124,15 +130,41 @@ async function showFinance(view) {
   if (isFinanceRoute(view)) paintFinance(view);
 }
 
+// ---------- Período (Início, Receitas e Despesas) ----------
+function refreshPeriodView() {
+  state.incomeExpandedId = null;
+  state.expenseExpandedId = null;
+  if (location.hash === "#/despesas") showExpenses();
+  else showFinance(location.hash === "#/receitas" ? "receitas" : "inicio");
+}
+
+function choosePeriod(id) {
+  if (id !== "PERSONALIZADO") { state.finance.period = id; refreshPeriodView(); return; }
+  openDialog({
+    title: "Período personalizado",
+    content: periodDialogContent(state.finance.custom),
+    confirmLabel: "Aplicar",
+    onConfirm: dialog => {
+      const de = dialog.querySelector("#dDe").value, ate = dialog.querySelector("#dAte").value;
+      const support = dialog.querySelector("#dPeriodo-support");
+      if (!de && !ate) { support.textContent = "Informe ao menos uma data."; return false; }
+      if (de && ate && de > ate) { support.textContent = "A data inicial deve ser antes da final."; return false; }
+      state.finance.period = "PERSONALIZADO";
+      state.finance.custom = { de, ate };
+      refreshPeriodView();
+    },
+  });
+}
+
 // ---------- Despesas (pagamentos aos vendedores) ----------
 async function showExpenses() {
   const e = state.expenses;
   const request = ++e.request;
   e.list = null; e.error = null;
-  paint(storeExpensesView(e));
+  paintExpenses();
   document.title = `Despesas · ${state.loja.loja_nome}`;
   try {
-    const list = await loadPayouts(state.loja.loja_id);
+    const list = await loadPayouts(state.loja.loja_id, state.finance.period, state.finance.custom);
     if (request !== e.request) return;
     e.list = list;
   } catch (err) {
@@ -437,7 +469,7 @@ function toggleDetails(card, event) {
   document.querySelector(`[data-action="toggle-details"][data-id="${id}"] .product-main`)?.focus({ preventScroll: true });
 }
 
-const paintExpenses = () => paint(storeExpensesView({ ...state.expenses, expandedId: state.expenseExpandedId }));
+const paintExpenses = () => paint(storeExpensesView({ ...state.expenses, period: state.finance.period, custom: state.finance.custom, expandedId: state.expenseExpandedId }));
 
 // Despesas: abre/fecha a divisão vendedor/loja da venda que originou o pagamento.
 function toggleExpense(card, event) {
@@ -477,7 +509,7 @@ export const operatorActions = {
   "toggle-details": toggleDetails,
   "toggle-income": toggleIncome,
   "toggle-expense": toggleExpense,
-  "finance-period": button => { state.finance.period = button.dataset.period; state.incomeExpandedId = null; showFinance(location.hash === "#/receitas" ? "receitas" : "inicio"); },
+  "finance-period": button => choosePeriod(button.dataset.period),
   "finance-reload": () => showFinance(location.hash === "#/receitas" ? "receitas" : "inicio"),
   "expenses-filter": button => { state.expenses.filter = button.dataset.filter; state.expenseExpandedId = null; paintExpenses(); },
   "expenses-reload": () => showExpenses(),

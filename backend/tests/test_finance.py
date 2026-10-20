@@ -133,9 +133,24 @@ def test_lista_repasses_por_status(client):
     vender(client, "C", "300.00", "180.00", "120.00")
     a = next(r for r in repasses(client) if r["produto_nome"] == "A")
     pagar(client, a["id"], "PIX")
-    assert [r["produto_nome"] for r in repasses(client)] == ["B", "C", "A"]  # pendentes (mais antigo primeiro), depois pagos
-    assert [r["produto_nome"] for r in repasses(client, "pendente")] == ["B", "C"]
+    assert [r["produto_nome"] for r in repasses(client)] == ["A", "C", "B"]  # extrato: mais recente primeiro (A foi pago por último)
+    a_pago = next(r for r in repasses(client) if r["produto_nome"] == "A")
+    assert a_pago["data_referencia"] == a_pago["pago_em"]
+    c = next(r for r in repasses(client) if r["produto_nome"] == "C")
+    assert c["data_referencia"] == c["venda_data_hora"]
+    assert [r["produto_nome"] for r in repasses(client, "pendente")] == ["C", "B"]
     assert [r["produto_nome"] for r in repasses(client, "PAGO")] == ["A"]
+
+
+def test_repasses_filtra_periodo(client):
+    vender(client, "A", "100.00", "60.00", "40.00")
+    url = f"/api/lojas/{client.loja['id']}/repasses"
+    agora = datetime.now(timezone.utc)
+    futuro = (agora + timedelta(days=1)).isoformat()
+    passado = (agora - timedelta(days=1)).isoformat()
+    assert len(client.get(url, params={"de": passado, "ate": futuro}, headers=client.op_auth).json()) == 1
+    assert client.get(url, params={"de": futuro}, headers=client.op_auth).json() == []
+    assert client.get(url, params={"ate": passado}, headers=client.op_auth).json() == []
 
 
 def test_resumo_financeiro_da_loja(client):

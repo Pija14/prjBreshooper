@@ -89,6 +89,7 @@ class RepasseResponse(BaseModel):
     status: str
     forma_pagamento: str | None
     pago_em: DataHoraUTC | None
+    data_referencia: DataHoraUTC    # data no extrato: pagamento (PAGO) ou venda (PENDENTE)
 
 
 class PagamentoRepasseRequest(BaseModel):
