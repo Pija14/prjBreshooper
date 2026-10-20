@@ -10,7 +10,7 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -160,3 +160,53 @@ def test_configuracao_ignora_espacos_e_quebras_de_linha(monkeypatch):
     config = Settings()
     assert config.google_client_id == "cliente.apps.googleusercontent.com"
     assert config.jwt_secret == "s" * 40
+
+
+def _criar_loja(client):
+    db = client.session_factory()
+    loja = Store(nome="Breshopper Teste", status="ATIVO")
+    db.add(loja)
+    db.commit()
+    loja_id = loja.id
+    db.close()
+    return loja_id
+
+
+def _sessao(client, corpo):
+    return client.get("/api/auth/sessao", headers={"Authorization": f"Bearer {corpo['token_acesso']}"}).json()
+
+
+def test_todo_login_vira_operador_da_loja_configurada(client, monkeypatch):
+    loja_id = _criar_loja(client)
+    monkeypatch.setattr(settings, "loja_operador_automatico", loja_id)
+    corpo = entrar(client, credencial()).json()
+    assert _sessao(client, corpo)["lojas"] == [{"operador_id": 1, "loja_id": loja_id, "loja_nome": "Breshopper Teste", "perfil": "OPERADOR"}]
+    # Novo login não duplica o vínculo.
+    entrar(client, credencial())
+    db = client.session_factory()
+    assert len(db.scalars(select(Operator)).all()) == 1
+    db.close()
+
+
+def test_operador_desativado_continua_inativo(client, monkeypatch):
+    loja_id = _criar_loja(client)
+    monkeypatch.setattr(settings, "loja_operador_automatico", loja_id)
+    corpo = entrar(client, credencial()).json()
+    client.patch("/api/operadores/1", json={"status": "INATIVO"})
+    corpo = entrar(client, credencial()).json()
+    assert _sessao(client, corpo)["lojas"] == []
+
+
+def test_vinculo_automatico_desligado_ou_loja_inexistente(client, monkeypatch):
+    _criar_loja(client)
+    monkeypatch.setattr(settings, "loja_operador_automatico", None)
+    assert _sessao(client, entrar(client, credencial()).json())["lojas"] == []
+    monkeypatch.setattr(settings, "loja_operador_automatico", 999)
+    assert entrar(client, credencial(sub="outro", email="outra@example.com")).status_code == 200
+
+
+def test_configuracao_loja_operador_automatico(monkeypatch):
+    from app.config import Settings
+    for valor, esperado in [("1", 1), (" 2 ", 2), ("", None), ("0", None)]:
+        monkeypatch.setenv("LOJA_OPERADOR_AUTOMATICO", valor)
+        assert Settings().loja_operador_automatico == esperado

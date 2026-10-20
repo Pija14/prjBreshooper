@@ -48,6 +48,8 @@ No MVP, somente o **operador ativo da própria loja** pode realizar operações 
 
 **Operadores não vendem nem compram produtos.** Quem é operador ativo de uma loja atua somente em nome dela: não pode ser o usuário vendedor de um produto (a API recusa com "Operadores de loja não podem vender produtos") e, no app, vê apenas a **Área da loja** — sem saldo e sem as ações de comprar ou vender.
 
+**Todo login com Google vira operador da loja 1.** Enquanto o app é usado só pela equipe da loja, quem entra com o Google passa a ser `OPERADOR` ativo da loja configurada em `LOJA_OPERADOR_AUTOMATICO` (padrão `1`, a única loja). Um vínculo já existente não é alterado (um operador desativado continua `INATIVO`). Atenção: como operador não vende nem compra, um cliente que entrar com o Google deixa de aparecer em Clientes e não pode mais vender ou comprar; para voltar a ter clientes usando o app, defina `LOJA_OPERADOR_AUTOMATICO` vazio (ou `0`).
+
 ### Produto
 
 É o item colocado à venda pelo usuário e recebido/cadastrado por uma loja.

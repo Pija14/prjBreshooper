@@ -30,6 +30,7 @@ Uma pessoa entrega um produto usado a uma **loja parceira**; um **operador** da 
 2. **Operador pertence a uma loja** e só opera produtos **da própria loja**, e somente se estiver `ATIVO`.
    - **Venda:** registrada pelo operador ativo da loja (`POST /api/vendas`) para um comprador ativo que não é o vendedor nem operador; valores copiados da avaliação; uma venda por produto.
    - **Repasse e carteira:** a venda gera, na mesma transação, um repasse `PENDENTE` de `valor_usuario` (despesa da loja, tabela `repasses`). A loja paga uma vez, por `PIX`, `CARTAO` ou `CREDITO_LOJA`; **só `CREDITO_LOJA` credita a carteira** (`movimentacoes`). Uso do saldo e saque PIX pelo cliente ainda não existem (Fase 8) — não invente regras.
+   - **Login vira operador:** com `LOJA_OPERADOR_AUTOMATICO` (padrão 1), todo login com Google cria o vínculo `OPERADOR` ativo nessa loja, se ainda não existir; vínculo existente (inclusive `INATIVO`) não muda.
    - **Operador não vende nem compra.** Um operador ativo nunca é `usuario_vendedor_id` de produto (a API retorna 400) e, no app, vê só a Área da loja — sem saldo e sem comprar/vender.
 3. **Produto exige categoria e marca por ID** (cadastros próprios, não texto livre).
 4. **Uma avaliação por produto** (restrição única `uq_avaliacoes_produto`).

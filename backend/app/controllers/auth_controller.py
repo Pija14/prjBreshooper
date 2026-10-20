@@ -18,7 +18,20 @@ def configuracao_google():
     return GoogleConfigResponse(habilitado=bool(settings.google_client_id), client_id=settings.google_client_id)
 
 
-@router.post("/google", response_model=AuthResponse, summary="Entrar com Google", description="Recebe o ID token do Google Identity Services, valida-o no servidor e devolve o token de sessão do Breshopper. Se ainda não existir, o usuário é cadastrado com nome, e-mail e foto da conta Google; se já existir um usuário com o mesmo e-mail, a conta Google é vinculada a ele.")
+def vincular_operador_automatico(db: Session, usuario: User) -> None:
+    """Torna o usuário OPERADOR ativo da loja configurada, se ainda não tiver vínculo com ela.
+
+    Um vínculo já existente não é alterado: um operador desativado continua INATIVO.
+    """
+    loja_id = settings.loja_operador_automatico
+    if not loja_id or not db.get(Store, loja_id):
+        return
+    vinculo = db.scalar(select(Operator).where(Operator.loja_id == loja_id, Operator.usuario_id == usuario.id))
+    if not vinculo:
+        db.add(Operator(loja_id=loja_id, usuario_id=usuario.id, perfil="OPERADOR", status="ATIVO"))
+
+
+@router.post("/google", response_model=AuthResponse, summary="Entrar com Google", description="Recebe o ID token do Google Identity Services, valida-o no servidor e devolve o token de sessão do Breshopper. Se ainda não existir, o usuário é cadastrado com nome, e-mail e foto da conta Google; se já existir um usuário com o mesmo e-mail, a conta Google é vinculada a ele. Com LOJA_OPERADOR_AUTOMATICO configurada (padrão: loja 1), o usuário passa a ser OPERADOR ativo dessa loja, se ainda não tiver vínculo com ela.")
 def entrar_com_google(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
     exigir_configuracao_jwt()
     if not settings.google_client_id:
@@ -42,6 +55,8 @@ def entrar_com_google(payload: GoogleLoginRequest, db: Session = Depends(get_db)
         raise HTTPException(status_code=403, detail="Usuário inativo")
     if avatar and not usuario.url_avatar:
         usuario.url_avatar = str(avatar)[:500]
+    db.flush()
+    vincular_operador_automatico(db, usuario)
     db.commit()
     db.refresh(usuario)
 
