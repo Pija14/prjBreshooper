@@ -325,7 +325,6 @@ h1, h2, h3, p { margin: 0; overflow-wrap: anywhere; }
 /* ---------- Área da loja (operador) ---------- */
 .store-heading { display: grid; min-width: 0; }
 .store-overline { color: var(--md-sys-color-primary); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: .5px; }
-.store-name { overflow: hidden; font-size: 20px; line-height: 26px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
 .store-shell .brand { min-width: 0; }
 .store-page { padding-bottom: 112px; }
 

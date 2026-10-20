@@ -63,7 +63,7 @@ function storeDrawerView(active, loja, { financeOpen = false } = {}) {
     </nav>`;
 }
 
-// Moldura da área da loja: botão do menu, loja atual, menu da conta e menu lateral.
+// Moldura da área da loja: botão do menu, marca e menu da conta; a loja atual aparece só no menu lateral.
 export function storeShellView({ usuario, loja, content, active, financeOpen }) {
   return `
     <div class="app-shell store-shell">
@@ -71,7 +71,6 @@ export function storeShellView({ usuario, loja, content, active, financeOpen }) 
         <div class="brand">
           <button class="icon-button state-layer menu-button" data-action="toggle-drawer" aria-label="Menu" aria-controls="storeDrawer" aria-expanded="false">${icon("menu")}</button>
           ${brandMark(36)}
-          <span class="store-heading"><span class="store-overline">Área da loja</span><span class="store-name">${esc(loja.loja_nome)}</span></span>
         </div>
         <button class="avatar-button state-layer" data-action="account-menu" aria-label="Conta de ${esc(usuario?.nome)}" aria-haspopup="menu" aria-expanded="false">${avatarView(usuario)}</button>
       </header>

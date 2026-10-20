@@ -1,7 +1,7 @@
 // Service worker do Breshopper.
 // Todos os caminhos são relativos: o site roda em um subcaminho no GitHub Pages (/prjBreshooper/).
 // Ao criar ou renomear arquivos, atualize ASSETS e incremente CACHE.
-const CACHE = "breshopper-v13";
+const CACHE = "breshopper-v14";
 const ASSETS = [
   "./", "./index.html", "./manifest.json", "./css/global.css",
   "./js/main.js", "./js/config.js",
