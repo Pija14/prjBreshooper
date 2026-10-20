@@ -10,12 +10,13 @@ import {
   splitPreviewView, storeDashboardView, storeShellView,
 } from "../views/operatorViews.js";
 import { bannerView } from "../views/authViews.js";
-import { loadStoreFinance } from "../services/finance.js";
-import { storeFinanceView } from "../views/financeViews.js";
+import { loadPayouts, loadStoreFinance, payPayout } from "../services/finance.js";
+import { FORMAS, payDialogContent, storeExpensesView, storeHomeView, storeIncomeView } from "../views/financeViews.js";
 import { centsToDecimalString, esc, formatBRL, formatCents, icon, openDialog, parseBRLToCents, showSnackbar } from "../views/ui.js";
 
 const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "", expandedId: null,
-  finance: { period: "MES", data: null, error: null, request: 0 } };
+  finance: { period: "MES", data: null, error: null, request: 0 },
+  expenses: { filter: "PENDENTE", list: null, error: null, request: 0 } };
 
 function byId(list) { return new Map((list || []).map(x => [x.id, x])); }
 
@@ -73,11 +74,14 @@ function route() {
   const hash = location.hash;
   const avaliar = hash.match(/^#\/avaliar\/(\d+)$/);
   const vender = hash.match(/^#\/vender\/(\d+)$/);
-  if (hash === "#/financeiro") return showFinance();
+  if (hash === "#/produtos") return showDashboard();
+  if (hash === "#/receitas") return showFinance("receitas");
+  if (hash === "#/despesas") return showExpenses();
   if (hash === "#/receber") return showReceive();
   if (avaliar) return showEvaluate(Number(avaliar[1]));
   if (vender) return showSell(Number(vender[1]));
-  showDashboard();
+  if (hash !== "" && hash !== "#/") history.replaceState(null, "", "#/"); // rota antiga (ex.: #/financeiro) ou desconhecida
+  showFinance("inicio");
 }
 
 function go(hash) {
@@ -89,16 +93,25 @@ function showDashboard() {
   const all = items();
   const counts = all.reduce((acc, i) => ({ ...acc, [i.produto.status]: (acc[i.produto.status] || 0) + 1 }), {});
   paint(storeDashboardView({ usuario: state.session.usuario, loja: state.loja, counts, filter: state.filter, items: all, expandedId: state.expandedId }));
-  document.title = `${state.loja.loja_nome} · Breshopper`;
+  document.title = `Produtos · ${state.loja.loja_nome}`;
 }
 
-// ---------- Financeiro ----------
-async function showFinance() {
+// ---------- Início e Receitas (resumo financeiro do período) ----------
+const isFinanceRoute = view => (view === "inicio" ? ["", "#/"].includes(location.hash) : location.hash === "#/receitas");
+
+function paintFinance(view) {
+  const f = state.finance;
+  paint(view === "inicio"
+    ? storeHomeView({ usuario: state.session.usuario, loja: state.loja, ...f })
+    : storeIncomeView(f));
+}
+
+async function showFinance(view) {
   const f = state.finance;
   const request = ++f.request;
   f.data = null; f.error = null;
-  paint(storeFinanceView(f));
-  document.title = `Financeiro · ${state.loja.loja_nome}`;
+  paintFinance(view);
+  document.title = `${view === "inicio" ? "Início" : "Receitas"} · ${state.loja.loja_nome}`;
   try {
     const data = await loadStoreFinance(state.loja.loja_id, f.period);
     if (request !== f.request) return; // resposta de um período anterior
@@ -107,7 +120,54 @@ async function showFinance() {
     if (request !== f.request) return;
     f.error = errorText(err);
   }
-  if (location.hash === "#/financeiro") paint(storeFinanceView(f));
+  if (isFinanceRoute(view)) paintFinance(view);
+}
+
+// ---------- Despesas (pagamentos aos vendedores) ----------
+async function showExpenses() {
+  const e = state.expenses;
+  const request = ++e.request;
+  e.list = null; e.error = null;
+  paint(storeExpensesView(e));
+  document.title = `Despesas · ${state.loja.loja_nome}`;
+  try {
+    const list = await loadPayouts(state.loja.loja_id);
+    if (request !== e.request) return;
+    e.list = list;
+  } catch (err) {
+    if (request !== e.request) return;
+    e.error = errorText(err);
+  }
+  if (location.hash === "#/despesas") paint(storeExpensesView(e));
+}
+
+function payoutDialog(button) {
+  const repasse = state.expenses.list?.find(r => r.id === Number(button.dataset.id));
+  if (!repasse) return;
+  openDialog({
+    title: "Pagar vendedor",
+    content: payDialogContent(repasse),
+    confirmLabel: "Confirmar pagamento",
+    onOpen: dialog => {
+      dialog.addEventListener("change", () => { dialog.querySelector("#dForma-support").textContent = ""; });
+      dialog.querySelector('input[name="forma"]').focus();
+    },
+    onConfirm: async dialog => {
+      const forma = dialog.querySelector('input[name="forma"]:checked')?.value;
+      const support = dialog.querySelector("#dForma-support");
+      if (!forma) { support.textContent = "Escolha a forma de pagamento."; dialog.querySelector('input[name="forma"]').focus(); return false; }
+      try {
+        await payPayout(repasse.id, forma);
+        showSnackbar(forma === "CREDITO_LOJA"
+          ? `${formatBRL(repasse.valor)} creditados na carteira de ${repasse.vendedor_nome}.`
+          : `Pagamento de ${formatBRL(repasse.valor)} via ${FORMAS[forma].label} registrado.`);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) showSnackbar(err.message);
+        else { support.textContent = errorText(err); return false; }
+      }
+      showExpenses();
+    },
+  });
 }
 
 // ---------- Receber produto ----------
@@ -165,7 +225,7 @@ async function submitReceive(event) {
     state.data.produtos.push(produto);
     state.filter = "RECEBIDO";
     showSnackbar(`“${produto.nome}” registrado. Agora é só avaliar.`);
-    go("#/");
+    go("#/produtos");
   } catch (err) {
     formMessage(errorText(err));
     button.disabled = false;
@@ -251,7 +311,7 @@ function showEvaluate(produtoId) {
   const item = items().find(i => i.produto.id === produtoId);
   if (!item || item.produto.status !== "RECEBIDO") {
     showSnackbar(item ? "Este produto já foi avaliado." : "Produto não encontrado nesta loja.");
-    history.replaceState(null, "", "#/");
+    history.replaceState(null, "", "#/produtos");
     showDashboard();
     return;
   }
@@ -292,7 +352,7 @@ function submitEvaluate(event, item) {
         Object.assign(item.produto, { status: "DISPONIVEL", valor_venda: centsToDecimalString(split.venda) });
         state.filter = "DISPONIVEL";
         showSnackbar(`“${item.produto.nome}” está disponível para venda.`);
-        go("#/");
+        go("#/produtos");
       } catch (err) {
         formMessage(errorText(err));
       }
@@ -305,7 +365,7 @@ function showSell(produtoId, selected = "") {
   const item = items().find(i => i.produto.id === produtoId);
   if (!item || item.produto.status !== "DISPONIVEL") {
     showSnackbar(item ? "Este produto não está disponível para venda." : "Produto não encontrado nesta loja.");
-    history.replaceState(null, "", "#/");
+    history.replaceState(null, "", "#/produtos");
     showDashboard();
     return;
   }
@@ -334,8 +394,8 @@ function submitSell(event, item) {
         state.data.vendas.push(registrada);
         item.produto.status = "VENDIDO";
         state.filter = "VENDIDO";
-        showSnackbar(`Venda registrada (${registrada.referencia}).`);
-        go("#/");
+        showSnackbar(`Venda registrada (${registrada.referencia}). A parte do vendedor está em Despesas.`);
+        go("#/produtos");
       } catch (err) {
         formMessage(errorText(err));
       }
@@ -387,10 +447,13 @@ document.addEventListener("keydown", event => {
 export const operatorActions = {
   filter: button => { state.filter = button.dataset.filter; state.expandedId = null; showDashboard(); },
   "toggle-details": toggleDetails,
-  "finance-period": button => { state.finance.period = button.dataset.period; showFinance(); },
-  "finance-reload": () => showFinance(),
+  "finance-period": button => { state.finance.period = button.dataset.period; showFinance(location.hash === "#/receitas" ? "receitas" : "inicio"); },
+  "finance-reload": () => showFinance(location.hash === "#/receitas" ? "receitas" : "inicio"),
+  "expenses-filter": button => { state.expenses.filter = button.dataset.filter; paint(storeExpensesView(state.expenses)); },
+  "expenses-reload": () => showExpenses(),
+  pay: payoutDialog,
   "go-receive": () => go("#/receber"),
-  "go-dashboard": () => go("#/"),
+  "go-dashboard": () => go("#/produtos"),
   evaluate: button => go(`#/avaliar/${button.dataset.id}`),
   sell: button => go(`#/vender/${button.dataset.id}`),
   "new-buyer": () => {

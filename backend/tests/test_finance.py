@@ -1,4 +1,4 @@
-"""Testes da conta corrente (crédito na venda) e do financeiro da loja."""
+"""Testes do financeiro: repasses (despesas) ao vendedor, carteira e resumo da loja."""
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
@@ -10,7 +10,7 @@ import pytest
 from app.config import settings
 from app.database.session import get_db
 from app.main import app
-from app.models import Movement, Operator, Sale, Store, User  # noqa: F401  (registra todas as tabelas)
+from app.models import Movement, Operator, Payout, Sale, Store, User  # noqa: F401  (registra todas as tabelas)
 from app.models.base import Base
 from app.security import criar_token_acesso
 
@@ -38,6 +38,7 @@ def client(monkeypatch):
         c.loja = c.post("/api/lojas", json={"nome": "Brechó Teste"}).json()
         operadora = c.post("/api/usuarios", json={"nome": "Ana", "email": "ana@example.com"}).json()
         c.operador = c.post("/api/operadores", json={"loja_id": c.loja["id"], "usuario_id": operadora["id"], "perfil": "OPERADOR"}).json()
+        c.op_auth = auth(operadora["id"])
         c.vendedor = c.post("/api/usuarios", json={"nome": "Bia", "email": "bia@example.com"}).json()
         c.comprador = c.post("/api/usuarios", json={"nome": "Caio", "email": "caio@example.com"}).json()
         yield c
@@ -53,66 +54,123 @@ def vender(c, nome, venda, usuario, loja, vendedor_id=None):
     return r.json()
 
 
-def test_venda_gera_credito_na_conta_do_vendedor(client):
-    venda = vender(client, "Raquete", "1000.00", "600.00", "400.00")
-    r = client.get("/api/conta-corrente", headers=auth(client.vendedor["id"]))
+def repasses(c, status=None):
+    params = {"status": status} if status else {}
+    r = c.get(f"/api/lojas/{c.loja['id']}/repasses", params=params, headers=c.op_auth)
     assert r.status_code == 200
-    conta = r.json()
-    assert conta["saldo"] == "600.00"
-    assert conta["total_creditos"] == "600.00"
-    mov = conta["movimentacoes"][0]
-    assert (mov["tipo"], mov["origem"], mov["valor"]) == ("CREDITO", "VENDA", "600.00")
-    assert mov["produto_nome"] == "Raquete" and mov["referencia"] == venda["referencia"] and mov["loja_nome"] == "Brechó Teste"
-    assert mov["data_hora"].endswith(("Z", "+00:00"))
+    return r.json()
 
 
-def test_saldo_soma_varias_vendas_sem_erro_de_arredondamento(client):
-    vender(client, "A", "0.30", "0.10", "0.20")
-    vender(client, "B", "0.30", "0.20", "0.10")
-    vender(client, "C", "199.99", "120.00", "79.99")
-    conta = client.get("/api/conta-corrente", headers=auth(client.vendedor["id"])).json()
-    assert conta["saldo"] == "120.30"
-    assert [m["produto_nome"] for m in conta["movimentacoes"]] == ["C", "B", "A"]
+def pagar(c, repasse_id, forma, headers=None):
+    return c.post(f"/api/repasses/{repasse_id}/pagamento", json={"forma_pagamento": forma}, headers=headers or c.op_auth)
 
 
-def test_comprador_nao_recebe_credito(client):
+def conta(c, usuario_id):
+    return c.get("/api/conta-corrente", headers=auth(usuario_id)).json()
+
+
+def test_venda_gera_repasse_pendente_sem_creditar_carteira(client):
+    venda = vender(client, "Raquete", "1000.00", "600.00", "400.00")
+    [rep] = repasses(client)
+    assert (rep["status"], rep["valor"], rep["forma_pagamento"], rep["pago_em"]) == ("PENDENTE", "600.00", None, None)
+    assert rep["referencia"] == venda["referencia"] and rep["vendedor_nome"] == "Bia" and rep["produto_nome"] == "Raquete"
+    c = conta(client, client.vendedor["id"])
+    assert (c["saldo"], c["a_receber"], c["movimentacoes"]) == ("0.00", "600.00", [])
+
+
+def test_pagamento_em_credito_na_loja_vai_para_a_carteira(client):
+    venda = vender(client, "Raquete", "1000.00", "600.00", "400.00")
+    [rep] = repasses(client)
+    r = pagar(client, rep["id"], "CREDITO_LOJA")
+    assert r.status_code == 200
+    assert (r.json()["status"], r.json()["forma_pagamento"]) == ("PAGO", "CREDITO_LOJA")
+    assert r.json()["pago_em"].endswith(("Z", "+00:00"))
+    c = conta(client, client.vendedor["id"])
+    assert (c["saldo"], c["a_receber"]) == ("600.00", "0.00")
+    mov = c["movimentacoes"][0]
+    assert (mov["tipo"], mov["valor"], mov["referencia"], mov["produto_nome"]) == ("CREDITO", "600.00", venda["referencia"], "Raquete")
+
+
+@pytest.mark.parametrize("forma", ["PIX", "CARTAO"])
+def test_pagamento_por_pix_ou_cartao_nao_credita_carteira(client, forma):
     vender(client, "Raquete", "1000.00", "600.00", "400.00")
-    conta = client.get("/api/conta-corrente", headers=auth(client.comprador["id"])).json()
-    assert conta["saldo"] == "0.00" and conta["movimentacoes"] == []
+    [rep] = repasses(client)
+    assert pagar(client, rep["id"], forma).json()["forma_pagamento"] == forma
+    c = conta(client, client.vendedor["id"])
+    assert (c["saldo"], c["a_receber"], c["movimentacoes"]) == ("0.00", "0.00", [])
 
 
-def test_conta_exige_login(client):
-    assert client.get("/api/conta-corrente").status_code == 401
+def test_nao_paga_duas_vezes(client):
+    vender(client, "Raquete", "1000.00", "600.00", "400.00")
+    [rep] = repasses(client)
+    assert pagar(client, rep["id"], "CREDITO_LOJA").status_code == 200
+    r = pagar(client, rep["id"], "CREDITO_LOJA")
+    assert r.status_code == 409
+    assert r.json()["detail"] == "Este vendedor já foi pago por esta venda"
+    assert conta(client, client.vendedor["id"])["saldo"] == "600.00"
 
 
-def test_financeiro_da_loja(client):
+def test_forma_de_pagamento_invalida(client):
+    vender(client, "Raquete", "1000.00", "600.00", "400.00")
+    [rep] = repasses(client)
+    assert pagar(client, rep["id"], "BOLETO").status_code == 422
+    assert repasses(client)[0]["status"] == "PENDENTE"
+
+
+def test_pagamento_somente_por_operador_da_loja(client):
+    vender(client, "Raquete", "1000.00", "600.00", "400.00")
+    [rep] = repasses(client)
+    assert client.post(f"/api/repasses/{rep['id']}/pagamento", json={"forma_pagamento": "PIX"}).status_code == 401
+    assert pagar(client, rep["id"], "PIX", headers=auth(client.vendedor["id"])).status_code == 403
+    assert pagar(client, 999, "PIX").status_code == 404
+    assert client.get(f"/api/lojas/{client.loja['id']}/repasses", headers=auth(client.vendedor["id"])).status_code == 403
+
+
+def test_lista_repasses_por_status(client):
+    vender(client, "A", "100.00", "60.00", "40.00")
+    vender(client, "B", "200.00", "120.00", "80.00")
+    vender(client, "C", "300.00", "180.00", "120.00")
+    a = next(r for r in repasses(client) if r["produto_nome"] == "A")
+    pagar(client, a["id"], "PIX")
+    assert [r["produto_nome"] for r in repasses(client)] == ["B", "C", "A"]  # pendentes (mais antigo primeiro), depois pagos
+    assert [r["produto_nome"] for r in repasses(client, "pendente")] == ["B", "C"]
+    assert [r["produto_nome"] for r in repasses(client, "PAGO")] == ["A"]
+
+
+def test_resumo_financeiro_da_loja(client):
     outro = client.post("/api/usuarios", json={"nome": "Davi", "email": "davi@example.com"}).json()
     vender(client, "Raquete", "1000.00", "600.00", "400.00")
     vender(client, "Tênis", "350.00", "210.00", "140.00")
     vender(client, "Mochila", "500.00", "250.00", "250.00", vendedor_id=outro["id"])
-    r = client.get(f"/api/lojas/{client.loja['id']}/financeiro", headers=auth(client.operador["usuario_id"]))
-    assert r.status_code == 200
-    fin = r.json()
-    assert fin["resumo"] == {"quantidade_vendas": 3, "total_vendido": "1850.00", "receita_loja": "790.00", "creditado_vendedores": "1060.00"}
-    assert [(v["nome"], v["quantidade_vendas"], v["total_creditado"]) for v in fin["vendedores"]] == [("Bia", 2, "810.00"), ("Davi", 1, "250.00")]
-    assert [v["produto_nome"] for v in fin["vendas"]] == ["Mochila", "Tênis", "Raquete"]
-    assert fin["vendas"][0]["comprador_nome"] == "Caio"
+    reps = {r["produto_nome"]: r for r in repasses(client)}
+    pagar(client, reps["Raquete"]["id"], "PIX")
+    pagar(client, reps["Mochila"]["id"], "CREDITO_LOJA")
+
+    fin = client.get(f"/api/lojas/{client.loja['id']}/financeiro", headers=client.op_auth).json()
+    r = fin["resumo"]
+    assert (r["quantidade_vendas"], r["total_vendido"], r["receita_loja"], r["parte_vendedores"]) == (3, "1850.00", "790.00", "1060.00")
+    assert (r["pago_vendedores"], r["a_pagar_vendedores"], r["repasses_pendentes"]) == ("850.00", "210.00", 1)
+    assert r["pago_por_forma"] == {"PIX": "600.00", "CARTAO": "0.00", "CREDITO_LOJA": "250.00"}
+    assert [(v["nome"], v["total_vendedor"], v["a_pagar"]) for v in fin["vendedores"]] == [("Bia", "810.00", "210.00"), ("Davi", "250.00", "0.00")]
+    assert {v["produto_nome"]: v["repasse_status"] for v in fin["vendas"]} == {"Raquete": "PAGO", "Tênis": "PENDENTE", "Mochila": "PAGO"}
 
 
-def test_financeiro_filtra_periodo(client):
+def test_resumo_filtra_periodo_mas_a_pagar_e_sempre_total(client):
     vender(client, "Raquete", "1000.00", "600.00", "400.00")
     url = f"/api/lojas/{client.loja['id']}/financeiro"
-    h = auth(client.operador["usuario_id"])
-    agora = datetime.now(timezone.utc)
-    futuro = (agora + timedelta(days=1)).isoformat()
-    passado = (agora - timedelta(days=1)).isoformat()
-    assert client.get(url, params={"de": passado, "ate": futuro}, headers=h).json()["resumo"]["quantidade_vendas"] == 1
-    assert client.get(url, params={"de": futuro}, headers=h).json()["resumo"]["quantidade_vendas"] == 0
-    assert client.get(url, params={"ate": passado}, headers=h).json()["resumo"]["total_vendido"] == "0.00"
+    futuro = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+    passado = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    assert client.get(url, params={"de": passado, "ate": futuro}, headers=client.op_auth).json()["resumo"]["quantidade_vendas"] == 1
+    r = client.get(url, params={"de": futuro}, headers=client.op_auth).json()["resumo"]
+    assert (r["quantidade_vendas"], r["total_vendido"], r["a_pagar_vendedores"]) == (0, "0.00", "600.00")
 
 
 def test_financeiro_somente_operador_da_loja(client):
     url = f"/api/lojas/{client.loja['id']}/financeiro"
     assert client.get(url).status_code == 401
     assert client.get(url, headers=auth(client.vendedor["id"])).status_code == 403
-    assert client.get("/api/lojas/999/financeiro", headers=auth(client.operador["usuario_id"])).status_code == 404
+    assert client.get("/api/lojas/999/financeiro", headers=client.op_auth).status_code == 404
+
+
+def test_conta_exige_login(client):
+    assert client.get("/api/conta-corrente").status_code == 401

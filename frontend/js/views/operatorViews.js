@@ -82,7 +82,12 @@ export function productItemView(p, { vendedor, categoria, marca, comprador, aval
 
 // Barra de navegação (M3) fixa no rodapé da Área da loja.
 export function storeNavView(active) {
-  const items = [["produtos", "#/", "inventory", "Produtos"], ["financeiro", "#/financeiro", "wallet", "Financeiro"]];
+  const items = [
+    ["inicio", "#/", "home", "Início"],
+    ["produtos", "#/produtos", "inventory", "Produtos"],
+    ["receitas", "#/receitas", "trendingUp", "Receitas"],
+    ["despesas", "#/despesas", "trendingDown", "Despesas"],
+  ];
   return `
     <nav class="nav-bar" aria-label="Seções da loja">
       ${items.map(([id, href, ic, label]) => `

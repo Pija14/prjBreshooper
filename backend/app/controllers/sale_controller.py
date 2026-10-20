@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.models.evaluation import Evaluation
-from app.models.movement import Movement
+from app.models.payout import Payout
 from app.models.operator import Operator
 from app.models.product import Product
 from app.models.sale import Sale
@@ -38,7 +38,7 @@ def list_sales(
     return db.scalars(query).all()
 
 
-@router.post("", response_model=SaleResponse, status_code=status.HTTP_201_CREATED, summary="Registrar venda", description="Registra a venda de um produto DISPONIVEL a um usuário comprador. O operador ativo da loja do produto registra a venda em nome da loja; ele não é o comprador. O comprador não pode ser o vendedor do produto nem operador de loja. Os valores e a divisão vêm da avaliação, o produto passa a VENDIDO e a parte do vendedor é creditada na conta corrente dele.")
+@router.post("", response_model=SaleResponse, status_code=status.HTTP_201_CREATED, summary="Registrar venda", description="Registra a venda de um produto DISPONIVEL a um usuário comprador. O operador ativo da loja do produto registra a venda em nome da loja; ele não é o comprador. O comprador não pode ser o vendedor do produto nem operador de loja. Os valores e a divisão vêm da avaliação, o produto passa a VENDIDO e a parte do vendedor vira um repasse PENDENTE, que a loja paga depois (PIX, cartão ou crédito na loja).")
 def create_sale(
     payload: SaleCreate,
     operador_id: int,
@@ -92,16 +92,13 @@ def create_sale(
 
     try:
         db.flush()
-        # A parte do vendedor vira crédito na conta corrente dele, na mesma transação da venda.
-        db.add(Movement(
-            usuario_id=produto.usuario_vendedor_id,
-            loja_id=produto.loja_id,
+        # A parte do vendedor vira um repasse a pagar (despesa da loja), na mesma transação da venda.
+        db.add(Payout(
             venda_id=venda.id,
-            tipo="CREDITO",
-            origem="VENDA",
+            loja_id=produto.loja_id,
+            usuario_id=produto.usuario_vendedor_id,
             valor=venda.valor_usuario,
-            descricao=f"Venda de {produto.nome}"[:200],
-            status="CONCLUIDA",
+            status="PENDENTE",
         ))
         db.commit()
         db.refresh(venda)

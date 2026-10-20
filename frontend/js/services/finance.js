@@ -1,4 +1,4 @@
-// Serviço financeiro: conta corrente do cliente e financeiro da loja (ambos exigem a sessão).
+// Serviço financeiro: carteira do cliente, resumo da loja e pagamentos aos vendedores (tudo exige a sessão).
 import { apiRequest } from "./api.js";
 
 export function loadAccount() {
@@ -25,4 +25,14 @@ export function loadStoreFinance(lojaId, periodId) {
   if (ate) params.set("ate", ate.toISOString());
   const query = params.toString();
   return apiRequest(`/api/lojas/${lojaId}/financeiro${query ? `?${query}` : ""}`);
+}
+
+// Despesas: o que a loja deve (PENDENTE) e já pagou (PAGO) a cada vendedor.
+export function loadPayouts(lojaId) {
+  return apiRequest(`/api/lojas/${lojaId}/repasses`);
+}
+
+// forma: "PIX" | "CARTAO" | "CREDITO_LOJA" — só CREDITO_LOJA gera crédito na carteira do vendedor.
+export function payPayout(repasseId, forma) {
+  return apiRequest(`/api/repasses/${repasseId}/pagamento`, { method: "POST", body: { forma_pagamento: forma } });
 }

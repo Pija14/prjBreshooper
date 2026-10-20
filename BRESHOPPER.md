@@ -393,7 +393,7 @@ O MVP pode começar com um catálogo simples, com filtros básicos por:
 
 ### Fase 6 — Venda ✅ implementada
 
-Implementada na tabela `vendas` e no endpoint `POST /api/vendas?operador_id=` (corpo: `produto_id`, `usuario_comprador_id`). Regras: operador ativo da loja do produto; produto `DISPONIVEL` com avaliação `APROVADA`; comprador ativo, diferente do vendedor e que não seja operador de loja; uma venda por produto. Os valores (`valor_venda`, `valor_usuario`, `valor_loja`) são copiados da avaliação, a venda nasce `CONCLUIDA` com `referencia` única (`VND-XXXXXXXXXX`) e `data_hora`, e o produto passa a `VENDIDO`. A parte do vendedor é creditada na conta corrente dele (Fase 7).
+Implementada na tabela `vendas` e no endpoint `POST /api/vendas?operador_id=` (corpo: `produto_id`, `usuario_comprador_id`). Regras: operador ativo da loja do produto; produto `DISPONIVEL` com avaliação `APROVADA`; comprador ativo, diferente do vendedor e que não seja operador de loja; uma venda por produto. Os valores (`valor_venda`, `valor_usuario`, `valor_loja`) são copiados da avaliação, a venda nasce `CONCLUIDA` com `referencia` única (`VND-XXXXXXXXXX`) e `data_hora`, e o produto passa a `VENDIDO`. A parte do vendedor vira um **repasse** `PENDENTE` (despesa da loja), pago depois pela loja (Fase 7).
 
 Criar a entidade e o fluxo de venda.
 
@@ -423,12 +423,23 @@ PRODUTO VENDIDO
 
 ### Fase 7 — Conta corrente do usuário ✅ implementada
 
-Implementada na tabela `movimentacoes` (lançamentos `CREDITO`/`DEBITO`, origem `VENDA`, status `CONCLUIDA`). Ao registrar a venda, na mesma transação, a parte do vendedor (`valor_usuario`) vira um crédito na conta dele; a migration `0008` também creditou as vendas registradas antes. Saldo = créditos − débitos.
+Duas tabelas:
 
-- `GET /api/conta-corrente` (token): saldo e extrato do usuário autenticado — exibidos na tela inicial do cliente.
-- `GET /api/lojas/{loja_id}/financeiro?de=&ate=` (token, somente operador ativo da loja): total vendido, receita da loja, valor creditado aos vendedores, totais por vendedor e lista de vendas — exibidos na aba **Financeiro** da Área da loja (períodos: este mês, últimos 30 dias, tudo).
+- `repasses` — o que a loja deve a cada vendedor, um por venda. Nasce `PENDENTE` na venda (mesma transação) com o `valor_usuario`. A loja paga com `forma_pagamento` **`PIX`**, **`CARTAO`** ou **`CREDITO_LOJA`**; o repasse vira `PAGO` (com `pago_em` e operador). Um repasse só é pago uma vez (UPDATE condicional — dois cliques ou dois operadores não pagam em dobro).
+- `movimentacoes` — a carteira (conta corrente) do usuário: lançamentos `CREDITO`/`DEBITO`, status `CONCLUIDA`. **Só o pagamento em `CREDITO_LOJA` gera crédito na carteira**; PIX e cartão são pagos fora do Breshopper e ficam apenas registrados. Saldo = créditos − débitos.
 
-O crédito é liberado no momento da venda. Uso do saldo na loja e saque por PIX ficam para a Fase 8.
+Vendas anteriores a esta regra (que creditavam a carteira automaticamente) foram migradas como repasses `PAGO` em `CREDITO_LOJA` (migration `0009`), sem alterar saldos.
+
+Endpoints (todos exigem token; os da loja, operador ativo da loja):
+
+- `GET /api/conta-corrente` — saldo, extrato e `a_receber` (repasses pendentes do usuário). Tela inicial do cliente.
+- `GET /api/lojas/{loja_id}/financeiro?de=&ate=` — receitas (vendas), parte da loja e dos vendedores, pago aos vendedores (por forma) no período e **a pagar** (todos os pendentes, sem filtro de período).
+- `GET /api/lojas/{loja_id}/repasses?status=` — despesas: pendentes (mais antigos primeiro) e pagos.
+- `POST /api/repasses/{id}/pagamento` `{forma_pagamento}` — paga o vendedor.
+
+Na Área da loja o rodapé tem **Início** (resumo financeiro, tela inicial do operador), **Produtos**, **Receitas** (vendas do período) e **Despesas** (pagar vendedores: A pagar / Pagos / Todos).
+
+Uso do saldo na loja e saque por PIX pelo cliente ficam para a Fase 8.
 
 Este é um dos pontos centrais do modelo de negócio.
 
