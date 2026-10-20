@@ -93,6 +93,7 @@ export function avatarView(usuario, className = "avatar") {
 
 // Diálogo M3 (elemento <dialog> nativo: foco preso, Esc e fundo escurecido).
 // content: HTML do corpo; onConfirm: retorna false (ou Promise<false>) para manter aberto.
+// cancelLabel: null para um diálogo só de leitura, com um único botão (confirmLabel, ex.: "Fechar").
 export function openDialog({ title, content, confirmLabel = "Confirmar", cancelLabel = "Cancelar", onConfirm, onOpen }) {
   document.querySelector("dialog.dialog")?.remove();
   const dialog = document.createElement("dialog");
@@ -103,12 +104,12 @@ export function openDialog({ title, content, confirmLabel = "Confirmar", cancelL
       <h2 id="dialogTitle" class="dialog-title">${title}</h2>
       <div class="dialog-content">${content}</div>
       <div class="dialog-actions">
-        <button type="button" class="text-button state-layer" data-dialog="cancel">${cancelLabel}</button>
+        ${cancelLabel ? `<button type="button" class="text-button state-layer" data-dialog="cancel">${cancelLabel}</button>` : ""}
         <button type="submit" class="text-button state-layer">${confirmLabel}</button>
       </div>
     </form>`;
   const close = () => { if (dialog.open) dialog.close(); dialog.remove(); };
-  dialog.querySelector('[data-dialog="cancel"]').addEventListener("click", close);
+  dialog.querySelector('[data-dialog="cancel"]')?.addEventListener("click", close);
   dialog.addEventListener("click", event => { if (event.target === dialog) close(); });
   dialog.querySelector("form").addEventListener("submit", async event => {
     event.preventDefault();

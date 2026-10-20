@@ -716,6 +716,34 @@ textarea.input { min-height: 96px; resize: vertical; }
   .field-row > button { padding: 0 16px; }
 }
 
+
+/* ---------- Modal do cliente (vendas e compras) ---------- */
+.client-item.is-clickable { cursor: pointer; }
+.client-item.is-clickable:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 4%, var(--md-sys-color-surface-container)); }
+.client-main { align-items: flex-start; }
+.client-summary { display: flex; align-items: center; gap: 12px; color: var(--md-sys-color-on-surface-variant); font-size: 14px; }
+.client-summary .list-text { min-width: 0; }
+.history { display: grid; gap: 8px; }
+.history-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 8px; border-top: 1px solid var(--md-sys-color-outline-variant); }
+.history-header h3 { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--md-sys-color-primary); font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: .1px; }
+.history-count { min-width: 20px; padding: 0 6px; border-radius: var(--shape-full); background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); font-size: 12px; text-align: center; }
+.history-total { display: grid; justify-items: end; font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.history-total small { color: var(--md-sys-color-on-surface-variant); font-size: 12px; font-weight: 400; }
+.history-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.history-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: var(--shape-sm); background: var(--md-sys-color-surface-container); }
+.history-text { display: grid; gap: 2px; min-width: 0; }
+.history-text strong { overflow: hidden; font-size: 15px; line-height: 20px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
+.history-text > span { color: var(--md-sys-color-on-surface-variant); font-size: 12px; line-height: 16px; }
+.history-text .status-chip { min-height: 20px; padding: 0 6px; font-size: 11px; }
+.history-text .status-tertiary { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
+.history-text .status-primary { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.history-text .status-secondary { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+.history-text .status-error { background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); }
+.history-empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; }
+/* Diálogos longos: o conteúdo rola e título/botões ficam visíveis. */
+.dialog-form { max-height: calc(100dvh - 48px); grid-template-rows: auto minmax(0, 1fr) auto; }
+.dialog-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
 /* ---------- Camadas de estado (M3) ---------- */
 /* :where() = especificidade zero, para não anular o position de componentes fixos (ex.: .fab). */
 :where(.state-layer) { position: relative; }

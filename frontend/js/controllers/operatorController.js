@@ -11,7 +11,7 @@ import {
   splitPreviewView, storeDashboardView, storeShellView,
 } from "../views/operatorViews.js";
 import { bannerView } from "../views/authViews.js";
-import { clientCountText, clientListView, clientsView, reportsView } from "../views/clientViews.js";
+import { clientCountText, clientDetailsView, clientListView, clientsView, reportsView } from "../views/clientViews.js";
 import { loadPayouts, loadStoreFinance, payPayout } from "../services/finance.js";
 import { FORMAS, payDialogContent, periodDialogContent, storeExpensesView, storeHomeView, storeIncomeView } from "../views/financeViews.js";
 import { centsToDecimalString, esc, formatBRL, formatCents, icon, openDialog, parseBRLToCents, showSnackbar } from "../views/ui.js";
@@ -346,6 +346,30 @@ function editCustomer(button) {
 }
 
 // ---------- Clientes ----------
+// Modal com o histórico do cliente nesta loja: produtos que entregou (vendas) e que comprou (compras).
+function clientDetails(card) {
+  const cliente = state.data.usuarios.find(u => u.id === Number(card.dataset.id));
+  if (!cliente) return;
+  const produtos = new Map(state.data.produtos.map(p => [p.id, p]));
+  const vendaPorProduto = new Map(state.data.vendas.map(v => [v.produto_id, v]));
+  const avaliacaoPorProduto = new Map(state.data.avaliacoes.map(a => [a.produto_id, a]));
+  const recentes = (a, b) => new Date(b.venda?.data_hora || 0) - new Date(a.venda?.data_hora || 0) || b.produto.id - a.produto.id;
+  const entregues = state.data.produtos
+    .filter(p => p.usuario_vendedor_id === cliente.id)
+    .map(produto => ({ produto, venda: vendaPorProduto.get(produto.id), avaliacao: avaliacaoPorProduto.get(produto.id) }))
+    .sort(recentes);
+  const compras = state.data.vendas
+    .filter(v => v.usuario_comprador_id === cliente.id)
+    .map(venda => ({ venda, produto: produtos.get(venda.produto_id) }))
+    .sort((a, b) => new Date(b.venda.data_hora) - new Date(a.venda.data_hora));
+  openDialog({
+    title: esc(cliente.nome),
+    content: clientDetailsView({ cliente, entregues, compras }),
+    confirmLabel: "Fechar",
+    cancelLabel: null,
+  });
+}
+
 function clientStats() {
   const stats = new Map();
   const get = id => stats.get(id) || stats.set(id, { entregues: 0, comprados: 0 }).get(id);
@@ -618,14 +642,12 @@ function toggleIncome(card, event) {
   document.querySelector(`[data-action="toggle-income"][data-id="${id}"] .product-main`)?.focus({ preventScroll: true });
 }
 
-// Teclado: Enter/Espaço no card expansível (Produtos e Receitas).
+// Teclado: Enter/Espaço nos cards clicáveis (Produtos, Receitas, Despesas e Clientes).
 document.addEventListener("keydown", event => {
   if ((event.key === "Enter" || event.key === " ") && event.target.matches?.(".product-main[role=button]")) {
     event.preventDefault();
     const card = event.target.closest("[data-action]");
-    if (card?.dataset.action === "toggle-income") toggleIncome(card);
-    else if (card?.dataset.action === "toggle-expense") toggleExpense(card);
-    else if (card) toggleDetails(card);
+    if (card) operatorActions[card.dataset.action]?.(card);
   }
 });
 
@@ -651,6 +673,7 @@ export const operatorActions = {
   "new-customer": () => newCustomer(),
   "new-client": () => newCustomer(() => showClients()),
   "edit-client": editCustomer,
+  "client-details": clientDetails,
   "toggle-drawer": toggleDrawer,
   "toggle-drawer-group": toggleDrawerGroup,
   "close-drawer": () => closeDrawer(),
