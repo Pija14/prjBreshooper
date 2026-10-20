@@ -92,7 +92,25 @@ export function storeHomeView({ usuario, loja, period, data, error }) {
 }
 
 // ---------- Receitas: vendas do período ----------
-export function storeIncomeView({ period, data, error }) {
+function incomeItemView(v, expanded) {
+  const split = { venda: toCents(v.valor_venda), cliente: toCents(v.valor_usuario), loja: toCents(v.valor_loja) };
+  return `
+    <article class="list-item product-item is-expandable${expanded ? " is-expanded" : ""}" data-action="toggle-income" data-id="${v.venda_id}">
+      <div class="product-main" role="button" tabindex="0" aria-expanded="${expanded}" aria-controls="income-${v.venda_id}" aria-label="${esc(v.produto_nome)}: ${expanded ? "ocultar" : "ver"} divisão de valores">
+        <span class="list-icon">${icon("sold")}</span>
+        <span class="list-text">
+          <strong>${esc(v.produto_nome)}</strong>
+          <span>${esc(formatDate(v.data_hora))} · Comprador: ${esc(v.comprador_nome)}</span>
+          <span>Vendedor: ${esc(v.vendedor_nome)} · ${esc(v.referencia)}</span>
+        </span>
+      </div>
+      <span class="money-stack"><strong>${formatBRL(v.valor_loja)}</strong><small>da loja</small></span>
+      <span class="expand-icon" aria-hidden="true">${icon("expand")}</span>
+      ${expanded ? `<div class="product-details" id="income-${v.venda_id}">${splitPreviewView(split, { clienteLabel: "Vendedor" })}</div>` : ""}
+    </article>`;
+}
+
+export function storeIncomeView({ period, data, error, expandedId = null }) {
   const header = `<header class="greeting"><p>Entradas das vendas</p><h1>Receitas</h1></header>${periodChips(period)}`;
   if (error) return page("receitas", header, errorView(error, "finance-reload"));
   if (!data) return page("receitas", header, loadingView("Carregando as receitas…"));
@@ -101,23 +119,15 @@ export function storeIncomeView({ period, data, error }) {
     return page("receitas", header, `<div class="empty-state"><span class="empty-icon">${icon("trendingUp")}</span><strong>Nenhuma venda neste período</strong><span>Registre vendas em Produtos › Disponíveis › Vender.</span></div>`);
   }
   return page("receitas", header, `
-    <section class="finance-tiles" aria-label="Totais do período">
-      <div class="finance-tile"><span>${icon("sell", "icon icon-sm")}Total vendido</span><strong>${formatBRL(r.total_vendido)}</strong></div>
-      <div class="finance-tile tile-store"><span>${icon("storefront", "icon icon-sm")}Parte da loja</span><strong>${formatBRL(r.receita_loja)}</strong></div>
+    <section class="finance-hero income-hero" aria-label="Receita da loja no período">
+      <span class="balance-label">${icon("storefront")}Receita da loja</span>
+      <strong class="balance-value">${formatBRL(r.receita_loja)}</strong>
+      <span class="finance-count">${plural(r.quantidade_vendas, "venda", "vendas")} no período · toque numa venda para ver a divisão</span>
     </section>
     <section aria-labelledby="salesTitle">
       <h2 class="section-title" id="salesTitle">${plural(r.quantidade_vendas, "venda", "vendas")}</h2>
       <div class="list">
-        ${data.vendas.map(v => `
-          <div class="list-item">
-            <span class="list-icon">${icon("sold")}</span>
-            <span class="list-text">
-              <strong>${esc(v.produto_nome)}</strong>
-              <span>${esc(formatDate(v.data_hora))} · Comprador: ${esc(v.comprador_nome)}</span>
-              <span>Vendedor: ${esc(v.vendedor_nome)} · ${esc(v.referencia)}</span>
-            </span>
-            <span class="money-stack"><strong>${formatBRL(v.valor_venda)}</strong><small>Loja ${formatBRL(v.valor_loja)}</small></span>
-          </div>`).join("")}
+        ${data.vendas.map(v => incomeItemView(v, v.venda_id === expandedId)).join("")}
       </div>
     </section>`);
 }

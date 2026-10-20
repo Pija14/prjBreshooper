@@ -16,7 +16,8 @@ import { centsToDecimalString, esc, formatBRL, formatCents, icon, openDialog, pa
 
 const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "", expandedId: null,
   finance: { period: "MES", data: null, error: null, request: 0 },
-  expenses: { filter: "PENDENTE", list: null, error: null, request: 0 } };
+  expenses: { filter: "PENDENTE", list: null, error: null, request: 0 },
+  incomeExpandedId: null };
 
 function byId(list) { return new Map((list || []).map(x => [x.id, x])); }
 
@@ -103,7 +104,7 @@ function paintFinance(view) {
   const f = state.finance;
   paint(view === "inicio"
     ? storeHomeView({ usuario: state.session.usuario, loja: state.loja, ...f })
-    : storeIncomeView(f));
+    : storeIncomeView({ ...f, expandedId: state.incomeExpandedId }));
 }
 
 async function showFinance(view) {
@@ -436,18 +437,32 @@ function toggleDetails(card, event) {
   document.querySelector(`[data-action="toggle-details"][data-id="${id}"] .product-main`)?.focus({ preventScroll: true });
 }
 
-// Teclado: Enter/Espaço no card expansível.
+// Receitas: abre/fecha a divisão vendedor/loja de uma venda.
+function toggleIncome(card, event) {
+  if (event?.target.closest?.(".product-details")) return;
+  const id = Number(card.dataset.id);
+  state.incomeExpandedId = state.incomeExpandedId === id ? null : id;
+  const y = window.scrollY;
+  paintFinance("receitas");
+  window.scrollTo(0, y);
+  document.querySelector(`[data-action="toggle-income"][data-id="${id}"] .product-main`)?.focus({ preventScroll: true });
+}
+
+// Teclado: Enter/Espaço no card expansível (Produtos e Receitas).
 document.addEventListener("keydown", event => {
   if ((event.key === "Enter" || event.key === " ") && event.target.matches?.(".product-main[role=button]")) {
     event.preventDefault();
-    toggleDetails(event.target.closest('[data-action="toggle-details"]'));
+    const card = event.target.closest("[data-action]");
+    if (card?.dataset.action === "toggle-income") toggleIncome(card);
+    else if (card) toggleDetails(card);
   }
 });
 
 export const operatorActions = {
   filter: button => { state.filter = button.dataset.filter; state.expandedId = null; showDashboard(); },
   "toggle-details": toggleDetails,
-  "finance-period": button => { state.finance.period = button.dataset.period; showFinance(location.hash === "#/receitas" ? "receitas" : "inicio"); },
+  "toggle-income": toggleIncome,
+  "finance-period": button => { state.finance.period = button.dataset.period; state.incomeExpandedId = null; showFinance(location.hash === "#/receitas" ? "receitas" : "inicio"); },
   "finance-reload": () => showFinance(location.hash === "#/receitas" ? "receitas" : "inicio"),
   "expenses-filter": button => { state.expenses.filter = button.dataset.filter; paint(storeExpensesView(state.expenses)); },
   "expenses-reload": () => showExpenses(),
