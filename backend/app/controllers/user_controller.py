@@ -4,8 +4,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.models.operator import Operator
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.security import usuario_autenticado
 
 router = APIRouter(prefix="/api/usuarios", tags=["Usuários"])
 
@@ -55,4 +57,32 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=409, detail="Não foi possível cadastrar o usuário")
 
+    return usuario
+
+
+@router.patch("/{usuario_id}", response_model=UserResponse, summary="Alterar cliente", description="Altera o nome e/ou o telefone de um usuário. O e-mail não muda, pois identifica a conta Google. Somente operadores ativos de alguma loja (ou o próprio usuário). Exige Authorization: Bearer <token>.")
+def update_user(
+    usuario_id: int,
+    payload: UserUpdate,
+    autenticado: User = Depends(usuario_autenticado),
+    db: Session = Depends(get_db),
+):
+    usuario = db.get(User, usuario_id)
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    e_operador = db.scalar(select(Operator.id).where(Operator.usuario_id == autenticado.id, Operator.status == "ATIVO"))
+    if autenticado.id != usuario.id and not e_operador:
+        raise HTTPException(status_code=403, detail="Somente operadores de loja podem alterar clientes")
+
+    if payload.nome is not None:
+        nome = payload.nome.strip()
+        if not nome:
+            raise HTTPException(status_code=400, detail="Nome é obrigatório")
+        usuario.nome = nome
+    if payload.telefone is not None:
+        usuario.telefone = payload.telefone.strip() or None
+
+    db.commit()
+    db.refresh(usuario)
     return usuario

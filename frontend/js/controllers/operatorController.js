@@ -1,20 +1,22 @@
 // Controller da área da loja (operador): painel, recebimento e avaliação de produtos.
-// Rotas por hash para o botão "voltar" do celular funcionar: #/ (painel), #/receber, #/avaliar/<id>, #/vender/<id>.
+// Rotas por hash para o botão "voltar" do celular funcionar: #/ (início), #/produtos, #/receber, #/avaliar/<id>,
+// #/vender/<id>, #/despesas, #/receitas, #/clientes, #/relatorios.
 import { ApiError } from "../services/api.js";
 import {
   createBrand, createCategory, createCustomer, evaluateProduct, loadStoreData,
-  receiveProduct, registerSale, rememberStore, selectedStoreId, sellerCandidates,
+  receiveProduct, registerSale, rememberStore, selectedStoreId, sellerCandidates, updateCustomer,
 } from "../services/store.js";
 import {
   customerDialogContent, evaluateProductView, nameDialogContent, receiveProductView, sellProductView,
   splitPreviewView, storeDashboardView, storeShellView,
 } from "../views/operatorViews.js";
 import { bannerView } from "../views/authViews.js";
+import { clientCountText, clientListView, clientsView, reportsView } from "../views/clientViews.js";
 import { loadPayouts, loadStoreFinance, payPayout } from "../services/finance.js";
 import { FORMAS, payDialogContent, periodDialogContent, storeExpensesView, storeHomeView, storeIncomeView } from "../views/financeViews.js";
 import { centsToDecimalString, esc, formatBRL, formatCents, icon, openDialog, parseBRLToCents, showSnackbar } from "../views/ui.js";
 
-const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "", expandedId: null,
+const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "", expandedId: null, clientQuery: "",
   // Período compartilhado por Início, Receitas e Despesas (custom: { de, ate } em AAAA-MM-DD).
   finance: { period: "MES", custom: null, data: null, error: null, request: 0 },
   expenses: { filter: "PENDENTE", list: null, error: null, request: 0 },
@@ -28,8 +30,16 @@ function errorText(err) {
   return err?.message || "Algo deu errado. Tente novamente.";
 }
 
+// Item do menu lateral correspondente à rota atual.
+function activeSection() {
+  const hash = location.hash;
+  if (hash === "#/produtos" || hash === "#/receber" || /^#\/(avaliar|vender)\//.test(hash)) return "produtos";
+  const found = ["despesas", "receitas", "clientes", "relatorios"].find(id => hash === `#/${id}`);
+  return found || "inicio";
+}
+
 function paint(content) {
-  state.app.innerHTML = storeShellView({ usuario: state.session.usuario, loja: state.loja, content });
+  state.app.innerHTML = storeShellView({ usuario: state.session.usuario, loja: state.loja, content, active: activeSection() });
   // Linha de períodos com rolagem: mantém o chip selecionado visível (sem rolar a página).
   const row = state.app.querySelector(".chip-scroll");
   const chip = row?.querySelector(".is-selected");
@@ -84,6 +94,8 @@ function route() {
   if (hash === "#/produtos") return showDashboard();
   if (hash === "#/receitas") return showFinance("receitas");
   if (hash === "#/despesas") return showExpenses();
+  if (hash === "#/clientes") return showClients();
+  if (hash === "#/relatorios") { paint(reportsView()); document.title = `Relatórios · ${state.loja.loja_nome}`; return; }
   if (hash === "#/receber") return showReceive();
   if (avaliar) return showEvaluate(Number(avaliar[1]));
   if (vender) return showSell(Number(vender[1]));
@@ -277,19 +289,26 @@ function dialogError(dialog, id, message) {
   if (support) support.textContent = message;
 }
 
+function readCustomerDialog(dialog) {
+  return {
+    nome: dialog.querySelector("#dName").value.trim(),
+    email: dialog.querySelector("#dEmail").value.trim(),
+    telefone: dialog.querySelector("#dPhone").value.trim(),
+  };
+}
+
 function newCustomer(onCreated = usuario => showReceive({ ...readReceiveValues(), seller: String(usuario.id) })) {
   openDialog({
     title: "Novo cliente",
     content: customerDialogContent(),
     confirmLabel: "Cadastrar",
     onConfirm: async dialog => {
-      const nome = dialog.querySelector("#dName").value.trim();
-      const email = dialog.querySelector("#dEmail").value.trim();
+      const { nome, email, telefone } = readCustomerDialog(dialog);
       dialogError(dialog, "dName", nome ? "" : "Informe o nome.");
       dialogError(dialog, "dEmail", /^\S+@\S+\.\S+$/.test(email) ? "" : "Informe um e-mail válido.");
       if (!nome || !/^\S+@\S+\.\S+$/.test(email)) return false;
       try {
-        const usuario = await createCustomer({ nome, email });
+        const usuario = await createCustomer({ nome, email, telefone });
         state.data.usuarios.push(usuario);
         onCreated(usuario);
         showSnackbar(`Cliente ${usuario.nome} cadastrado.`);
@@ -300,6 +319,69 @@ function newCustomer(onCreated = usuario => showReceive({ ...readReceiveValues()
     },
   });
 }
+
+function editCustomer(button) {
+  const cliente = state.data.usuarios.find(u => u.id === Number(button.dataset.id));
+  if (!cliente) return;
+  openDialog({
+    title: "Editar cliente",
+    content: customerDialogContent(cliente),
+    confirmLabel: "Salvar",
+    onConfirm: async dialog => {
+      const { nome, telefone } = readCustomerDialog(dialog);
+      dialogError(dialog, "dName", nome ? "" : "Informe o nome.");
+      if (!nome) return false;
+      try {
+        const atualizado = await updateCustomer(cliente.id, { nome, telefone });
+        Object.assign(cliente, atualizado);
+        showClients();
+        showSnackbar(`Dados de ${atualizado.nome} salvos.`);
+      } catch (err) {
+        dialogError(dialog, "dPhone", errorText(err));
+        return false;
+      }
+    },
+  });
+}
+
+// ---------- Clientes ----------
+function clientStats() {
+  const stats = new Map();
+  const get = id => stats.get(id) || stats.set(id, { entregues: 0, comprados: 0 }).get(id);
+  for (const p of state.data.produtos) get(p.usuario_vendedor_id).entregues++;
+  for (const v of state.data.vendas) get(v.usuario_comprador_id).comprados++;
+  return stats;
+}
+
+function showClients() {
+  const clients = sellerCandidates(state.data);
+  const stats = clientStats();
+  paint(clientsView({ clients, stats, query: state.clientQuery }));
+  document.title = `Clientes · ${state.loja.loja_nome}`;
+  // A busca atualiza só a lista, para o teclado do celular não fechar a cada letra.
+  document.getElementById("clientSearch").addEventListener("input", event => {
+    state.clientQuery = event.target.value;
+    document.getElementById("clientList").innerHTML = clientListView(clients, stats, state.clientQuery);
+    document.getElementById("clientCount").textContent = clientCountText(clients, state.clientQuery);
+  });
+}
+
+// ---------- Menu lateral ----------
+function openDrawer() {
+  document.body.classList.add("drawer-open");
+  document.querySelector(".menu-button")?.setAttribute("aria-expanded", "true");
+  (document.querySelector(".drawer-item.is-active") || document.querySelector(".drawer-item"))?.focus();
+}
+
+function closeDrawer({ restoreFocus = true } = {}) {
+  if (!document.body.classList.contains("drawer-open")) return;
+  document.body.classList.remove("drawer-open");
+  document.querySelector(".menu-button")?.setAttribute("aria-expanded", "false");
+  if (restoreFocus) document.querySelector(".menu-button")?.focus();
+}
+
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeDrawer(); });
+window.addEventListener("hashchange", () => document.body.classList.remove("drawer-open"));
 
 function newNamed({ title, label, create, list, field }) {
   openDialog({
@@ -524,6 +606,11 @@ export const operatorActions = {
   },
   "store-reload": reload,
   "new-customer": () => newCustomer(),
+  "new-client": () => newCustomer(() => showClients()),
+  "edit-client": editCustomer,
+  "open-drawer": openDrawer,
+  "close-drawer": () => closeDrawer(),
+  "drawer-link": () => closeDrawer({ restoreFocus: false }),
   "new-category": () => newNamed({ title: "Nova categoria", label: "Nome da categoria", create: createCategory, list: "categorias", field: "categoria" }),
   "new-brand": () => newNamed({ title: "Nova marca", label: "Nome da marca", create: createBrand, list: "marcas", field: "marca" }),
   "pick-condition": pickCondition,

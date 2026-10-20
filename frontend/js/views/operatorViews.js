@@ -16,18 +16,52 @@ export const FILTERS = [
 export const CONDITIONS = ["Novo", "Seminovo", "Usado", "Com avarias"];
 const PERFIS = { ADMINISTRADOR: "Administrador", OPERADOR: "Operador" };
 
-// Moldura da área da loja: barra superior com a loja atual e o menu da conta.
-export function storeShellView({ usuario, loja, content }) {
+// Menu lateral (navigation drawer M3): modal no celular, fixo em telas largas.
+const DRAWER = [
+  { id: "inicio", href: "#/", icon: "home", label: "Início" },
+  { id: "produtos", href: "#/produtos", icon: "inventory", label: "Produtos" },
+  { section: "Financeiro" },
+  { id: "despesas", href: "#/despesas", icon: "trendingDown", label: "Despesas", sub: true },
+  { id: "receitas", href: "#/receitas", icon: "trendingUp", label: "Receitas", sub: true },
+  { divider: true },
+  { id: "clientes", href: "#/clientes", icon: "group", label: "Clientes" },
+  { id: "relatorios", href: "#/relatorios", icon: "barChart", label: "Relatórios", badge: "Em breve" },
+];
+
+function storeDrawerView(active, loja) {
+  return `
+    <div class="drawer-scrim" data-action="close-drawer"></div>
+    <nav class="drawer" id="storeDrawer" aria-label="Menu da loja">
+      <div class="drawer-header">
+        ${brandMark(32)}
+        <span class="store-heading"><span class="store-overline">Área da loja</span><span class="drawer-store">${esc(loja.loja_nome)}</span></span>
+      </div>
+      ${DRAWER.map(item => {
+        if (item.section) return `<p class="drawer-section" id="drawer-${item.section}">${item.section}</p>`;
+        if (item.divider) return `<hr class="drawer-divider">`;
+        const current = active === item.id;
+        return `<a class="drawer-item state-layer${item.sub ? " is-sub" : ""}${current ? " is-active" : ""}" href="${item.href}" data-action="drawer-link"${current ? ' aria-current="page"' : ""}>
+          ${icon(item.icon)}<span class="drawer-label">${item.label}</span>${item.badge ? `<span class="drawer-badge">${item.badge}</span>` : ""}
+        </a>`;
+      }).join("")}
+    </nav>`;
+}
+
+// Moldura da área da loja: botão do menu, loja atual, menu da conta e menu lateral.
+export function storeShellView({ usuario, loja, content, active }) {
   return `
     <div class="app-shell store-shell">
       <header class="top-app-bar">
-        <div class="brand">${brandMark(36)}
+        <div class="brand">
+          <button class="icon-button state-layer menu-button" data-action="open-drawer" aria-label="Abrir menu" aria-controls="storeDrawer" aria-expanded="false">${icon("menu")}</button>
+          ${brandMark(36)}
           <span class="store-heading"><span class="store-overline">Área da loja</span><span class="store-name">${esc(loja.loja_nome)}</span></span>
         </div>
         <button class="avatar-button state-layer" data-action="account-menu" aria-label="Conta de ${esc(usuario?.nome)}" aria-haspopup="menu" aria-expanded="false">${avatarView(usuario)}</button>
       </header>
       ${content}
-    </div>`;
+    </div>
+    ${storeDrawerView(active, loja)}`;
 }
 
 function statusChip(status) {
@@ -80,23 +114,6 @@ export function productItemView(p, { vendedor, categoria, marca, comprador, aval
     </article>`;
 }
 
-// Barra de navegação (M3) fixa no rodapé da Área da loja.
-export function storeNavView(active) {
-  const items = [
-    ["inicio", "#/", "home", "Início"],
-    ["produtos", "#/produtos", "inventory", "Produtos"],
-    ["receitas", "#/receitas", "trendingUp", "Receitas"],
-    ["despesas", "#/despesas", "trendingDown", "Despesas"],
-  ];
-  return `
-    <nav class="nav-bar" aria-label="Seções da loja">
-      ${items.map(([id, href, ic, label]) => `
-        <a class="nav-item${active === id ? " is-active" : ""}" href="${href}"${active === id ? ' aria-current="page"' : ""}>
-          <span class="nav-indicator state-layer">${icon(ic)}</span><span class="nav-label">${label}</span>
-        </a>`).join("")}
-    </nav>`;
-}
-
 export function storeDashboardView({ usuario, loja, counts, filter, items, expandedId = null }) {
   const filtered = filter === "TODOS" ? items : items.filter(i => i.produto.status === filter);
   const empty = {
@@ -106,7 +123,7 @@ export function storeDashboardView({ usuario, loja, counts, filter, items, expan
     TODOS: ["Nenhum produto nesta loja", "Comece registrando o primeiro produto recebido."],
   }[filter];
   return `
-    <main class="page store-page has-nav">
+    <main class="page store-page">
       <header class="greeting">
         <p>Olá, ${esc(firstName(usuario?.nome))} · ${esc(PERFIS[loja.perfil] || loja.perfil)}</p>
         <h1>Produtos da loja</h1>
@@ -129,8 +146,7 @@ export function storeDashboardView({ usuario, loja, counts, filter, items, expan
         ? `<section class="list" aria-label="Produtos">${filtered.map(i => productItemView(i.produto, { ...i, expanded: i.produto.id === expandedId })).join("")}</section>`
         : `<div class="empty-state"><span class="empty-icon">${icon("receive")}</span><strong>${empty[0]}</strong><span>${empty[1]}</span></div>`}
     </main>
-    <button class="fab state-layer" data-action="go-receive">${icon("receive")}<span>Receber produto</span></button>
-    ${storeNavView("produtos")}`;
+    <button class="fab state-layer" data-action="go-receive">${icon("receive")}<span>Receber produto</span></button>`;
 }
 
 function field({ id, label, control, hint = "" }) {
@@ -271,11 +287,14 @@ export function sellProductView({ produto, vendedor, categoria, marca, avaliacao
     </main>`;
 }
 
-export function customerDialogContent() {
+// cliente: dados atuais na edição (o e-mail não muda: identifica a conta Google).
+export function customerDialogContent(cliente = null) {
   return `
-    <p class="dialog-text">Cadastre o cliente pelo e-mail da conta Google dele. Quando ele entrar no Breshopper, verá seus produtos.</p>
-    ${field({ id: "dName", label: "Nome", control: '<input id="dName" class="input" maxlength="150" autocomplete="off" required>' })}
-    ${field({ id: "dEmail", label: "E-mail", control: '<input id="dEmail" class="input" type="email" inputmode="email" autocomplete="off" required>' })}`;
+    ${cliente ? "" : '<p class="dialog-text">Cadastre o cliente pelo e-mail da conta Google dele. Quando ele entrar no Breshopper, verá seus produtos.</p>'}
+    ${field({ id: "dName", label: "Nome", control: `<input id="dName" class="input" maxlength="150" autocomplete="off" required value="${esc(cliente?.nome || "")}">` })}
+    ${field({ id: "dEmail", label: "E-mail", hint: cliente ? "O e-mail identifica a conta Google e não pode ser alterado." : "",
+      control: `<input id="dEmail" class="input" type="email" inputmode="email" autocomplete="off" required value="${esc(cliente?.email || "")}"${cliente ? " readonly" : ""}>` })}
+    ${field({ id: "dPhone", label: "Telefone (opcional)", control: `<input id="dPhone" class="input" type="tel" inputmode="tel" maxlength="30" autocomplete="off" value="${esc(cliente?.telefone || "")}">` })}`;
 }
 
 export function nameDialogContent(label) {

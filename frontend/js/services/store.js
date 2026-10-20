@@ -35,8 +35,13 @@ export function sellerCandidates({ usuarios, operadores }) {
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
-export function createCustomer({ nome, email }) {
-  return apiRequest("/api/usuarios", { method: "POST", body: { nome, email } });
+export function createCustomer({ nome, email, telefone }) {
+  return apiRequest("/api/usuarios", { method: "POST", body: { nome, email, telefone: telefone || null } });
+}
+
+// Nome e telefone (o e-mail identifica a conta Google e não muda).
+export function updateCustomer(id, { nome, telefone }) {
+  return apiRequest(`/api/usuarios/${id}`, { method: "PATCH", body: { nome, telefone: telefone ?? "" } });
 }
 
 export function createCategory(nome) {

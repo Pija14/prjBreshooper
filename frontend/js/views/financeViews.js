@@ -2,7 +2,7 @@
 // e, na área do cliente, saldo e extrato da carteira.
 import { PERIODS, parseDay } from "../services/finance.js";
 import { esc, firstName, formatBRL, icon } from "./ui.js";
-import { splitPreviewView, storeNavView } from "./operatorViews.js";
+import { splitPreviewView } from "./operatorViews.js";
 
 const DATA_HORA = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 const HORA = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -97,13 +97,12 @@ function errorView(error, action) {
     <button class="filled-button state-layer" data-action="${action}">Tentar novamente</button></div>`;
 }
 
-function page(active, header, body) {
+function page(_active, header, body) {
   return `
-    <main class="page store-page has-nav">
+    <main class="page store-page">
       ${header}
       ${body}
-    </main>
-    ${storeNavView(active)}`;
+    </main>`;
 }
 
 // ---------- Início: resumo financeiro ----------

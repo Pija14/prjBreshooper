@@ -9,6 +9,12 @@ class UserCreate(BaseModel):
     url_avatar: str | None = None
 
 
+
+class UserUpdate(BaseModel):
+    nome: str | None = Field(default=None, max_length=150)
+    telefone: str | None = Field(default=None, max_length=30)
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

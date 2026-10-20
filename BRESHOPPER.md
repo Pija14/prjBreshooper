@@ -437,7 +437,7 @@ Endpoints (todos exigem token; os da loja, operador ativo da loja):
 - `GET /api/lojas/{loja_id}/repasses?status=&de=&ate=` — despesas como extrato, do mais recente ao mais antigo pela `data_referencia` (data do pagamento; para os pendentes, data da venda).
 - `POST /api/repasses/{id}/pagamento` `{forma_pagamento}` — paga o vendedor.
 
-Na Área da loja o rodapé tem **Início** (resumo financeiro, tela inicial do operador), **Produtos**, **Receitas** (vendas do período) e **Despesas** (pagar vendedores: A pagar / Pagos / Todos).
+A Área da loja tem um **menu lateral** (navigation drawer M3: abre pelo ☰ no celular, fixo à esquerda em telas a partir de 1200 px) com **Início** (resumo financeiro, tela inicial do operador), **Produtos**, **Financeiro › Despesas** (pagar vendedores: A pagar / Pagos / Todos) e **Receitas**, **Clientes** (cadastro: busca por nome, e-mail ou telefone; novo cliente com telefone; edição de nome e telefone via `PATCH /api/usuarios/{id}`, com token, por operador ativo ou pelo próprio usuário — o e-mail não muda) e **Relatórios** (em breve).
 
 Receitas e Despesas funcionam como **extrato bancário**: lançamentos agrupados por dia (Hoje, Ontem, data), com o total de cada dia. Receitas mostram só a parte da loja; tocar num lançamento abre a divisão vendedor/loja. O período é compartilhado por Início, Receitas e Despesas: Hoje, 7 dias, Este mês, Mês passado, Tudo ou Personalizado (de/até, as duas datas inclusas).
 
