@@ -3,12 +3,13 @@
 import { SLOW_HINT_MS } from "./config.js";
 import { handleOutsideInteraction, homeActions, renderHome } from "./controllers/homeController.js";
 import { loginActions, renderLogin } from "./controllers/loginController.js";
+import { operatorActions } from "./controllers/operatorController.js";
 import { restoreSession } from "./services/auth.js";
 import { splashView } from "./views/authViews.js";
 import { showSnackbar } from "./views/ui.js";
 
 const app = document.getElementById("app");
-const actions = { ...loginActions, ...homeActions };
+const actions = { ...loginActions, ...homeActions, ...operatorActions };
 
 function showLogin(notice, { signedOut = false } = {}) {
   renderLogin(app, { onSuccess: showHome, notice, signedOut });

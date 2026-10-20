@@ -46,6 +46,8 @@ Não existe uma entidade separada de “vendedor”. O vendedor é um **usuário
 
 No MVP, somente o **operador ativo da própria loja** pode realizar operações administrativas sobre produtos, como o cadastro e a avaliação.
 
+**Operadores não vendem nem compram produtos.** Quem é operador ativo de uma loja atua somente em nome dela: não pode ser o usuário vendedor de um produto (a API recusa com "Operadores de loja não podem vender produtos") e, no app, vê apenas a **Área da loja** — sem saldo e sem as ações de comprar ou vender.
+
 ### Produto
 
 É o item colocado à venda pelo usuário e recebido/cadastrado por uma loja.
@@ -153,6 +155,10 @@ Um operador precisa:
 - pertencer à loja do produto;
 - estar executando a operação em nome da própria loja.
 
+### Regra 3.1 — Operador não vende nem compra
+
+O usuário vendedor de um produto não pode ser operador ativo de nenhuma loja. O operador usa o sistema apenas para operar a loja.
+
 ### Regra 4 — Produto possui categoria e marca
 
 Categoria e marca são cadastros independentes e são referenciadas pelo produto por seus respectivos IDs.
@@ -219,6 +225,8 @@ O frontend segue o Material Design 3 com identidade própria (marca "sacola com 
 
 O login com Google está integrado de ponta a ponta: o botão oficial do Google Identity Services entrega o ID token ao backend, que o valida (assinatura, audiência, emissor, validade e e-mail verificado), cria ou localiza o usuário e emite um token de sessão (JWT). A primeira área autenticada exibe saudação, saldo (ainda R$ 0,00), as próximas ações marcadas como "Em breve" e as lojas em que o usuário é operador.
 
+Operadores entram direto na **Área da loja**: painel com contagem de produtos aguardando avaliação, disponíveis e vendidos (com filtros), **Receber produto** (cliente vendedor, categoria, marca, estado de conservação e descrição, com cadastro rápido de cliente, categoria e marca) e **Avaliar** (valor de venda e parte do cliente; a parte da loja é calculada em centavos para a divisão sempre fechar). As telas usam rotas por hash (`#/`, `#/receber`, `#/avaliar/<id>`) para o botão voltar funcionar. Se o operador atuar em mais de uma loja, troca de loja pelo menu da conta.
+
 Ainda não implementado: proteção por token dos endpoints administrativos existentes (produtos, avaliações, cadastros), que continuam recebendo `operador_id` como parâmetro.
 
 ### Estrutura funcional já construída
@@ -234,6 +242,7 @@ Ainda não implementado: proteção por token dos endpoints administrativos exis
 - [x] Frontend inicial
 - [x] Login com Google (validação no backend + sessão JWT)
 - [x] Área autenticada inicial (saudação, saldo, ações em breve, lojas do operador)
+- [x] Área da loja para operadores (painel, receber produto, avaliar)
 - [x] Identidade visual e PWA (ícones, manifesto, service worker)
 - [x] Publicação do frontend no GitHub Pages
 - [x] Publicação da API no Render

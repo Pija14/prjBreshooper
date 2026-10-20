@@ -1,13 +1,13 @@
 // Service worker do Breshopper.
 // Todos os caminhos são relativos: o site roda em um subcaminho no GitHub Pages (/prjBreshooper/).
 // Ao criar ou renomear arquivos, atualize ASSETS e incremente CACHE.
-const CACHE = "breshopper-v2";
+const CACHE = "breshopper-v3";
 const ASSETS = [
   "./", "./index.html", "./manifest.json", "./css/global.css",
   "./js/main.js", "./js/config.js",
-  "./js/services/api.js", "./js/services/auth.js", "./js/services/session.js",
-  "./js/views/ui.js", "./js/views/authViews.js", "./js/views/homeView.js",
-  "./js/controllers/loginController.js", "./js/controllers/homeController.js",
+  "./js/services/api.js", "./js/services/auth.js", "./js/services/session.js", "./js/services/store.js",
+  "./js/views/ui.js", "./js/views/authViews.js", "./js/views/homeView.js", "./js/views/operatorViews.js",
+  "./js/controllers/loginController.js", "./js/controllers/homeController.js", "./js/controllers/operatorController.js",
   "./icons/logo.svg", "./icons/favicon-32.png", "./icons/icon-192.png", "./icons/icon-512.png",
   "./icons/maskable-512.png", "./icons/apple-touch-icon.png",
 ];

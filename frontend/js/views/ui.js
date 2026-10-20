@@ -7,6 +7,21 @@ export function esc(value) {
 const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 export function formatBRL(value) { return BRL.format(Number(value || 0)); }
 
+// Dinheiro em centavos inteiros: evita erros de arredondamento de ponto flutuante.
+// Aceita "1.234,56", "1234,56", "1234.56", "R$ 1.234,56". Retorna NaN se inválido.
+export function parseBRLToCents(text) {
+  let s = String(text ?? "").replace(/R\$|\s/g, "");
+  if (!s) return NaN;
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  if (!/^\d+(\.\d{0,2})?$/.test(s)) return NaN;
+  const [inteiro, frac = ""] = s.split(".");
+  return Number(inteiro) * 100 + Number((frac + "00").slice(0, 2));
+}
+export function centsToDecimalString(cents) {
+  return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
+}
+export function formatCents(cents) { return formatBRL(cents / 100); }
+
 export function firstName(name) { return String(name || "").trim().split(/\s+/)[0] || ""; }
 
 export function initials(name) {
@@ -26,6 +41,15 @@ const ICONS = {
   shield: '<path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>',
   error: '<path d="M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>',
   info: '<path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>',
+  add: '<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>',
+  arrowBack: '<path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>',
+  check: '<path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>',
+  hourglass: '<path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6zm10 14.5V20H8v-3.5l4-4 4 4zm-4-5-4-4V4h8v3.5l-4 4z"/>',
+  sold: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>',
+  person: '<path d="M12 5.9c1.16 0 2.1.94 2.1 2.1s-.94 2.1-2.1 2.1S9.9 9.16 9.9 8s.94-2.1 2.1-2.1m0 9c2.97 0 6.1 1.46 6.1 2.1v1.1H5.9V17c0-.64 3.13-2.1 6.1-2.1M12 4C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 9c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z"/>',
+  personAdd: '<path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0-6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 8c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm-6 4c.22-.72 3.31-2 6-2 2.7 0 5.8 1.29 6 2H9zm-3-3v-3h3v-2H6V7H4v3H1v2h3v3z"/>',
+  receive: '<path d="M19 3H4.99C3.88 3 3.01 3.9 3.01 5L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10zm-3-5h-2V7h-4v3H8l4 4 4-4z"/>',
+  swap: '<path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/>',
 };
 
 export function icon(name, className = "icon") {
@@ -50,6 +74,42 @@ export function brandMark(size = 40) {
 export function avatarView(usuario, className = "avatar") {
   const photo = usuario?.url_avatar;
   return `<span class="${className}">${photo ? `<img src="${esc(photo)}" alt="" referrerpolicy="no-referrer">` : esc(initials(usuario?.nome))}</span>`;
+}
+
+// Diálogo M3 (elemento <dialog> nativo: foco preso, Esc e fundo escurecido).
+// content: HTML do corpo; onConfirm: retorna false (ou Promise<false>) para manter aberto.
+export function openDialog({ title, content, confirmLabel = "Confirmar", cancelLabel = "Cancelar", onConfirm, onOpen }) {
+  document.querySelector("dialog.dialog")?.remove();
+  const dialog = document.createElement("dialog");
+  dialog.className = "dialog";
+  dialog.setAttribute("aria-labelledby", "dialogTitle");
+  dialog.innerHTML = `
+    <form class="dialog-form" method="dialog" novalidate>
+      <h2 id="dialogTitle" class="dialog-title">${title}</h2>
+      <div class="dialog-content">${content}</div>
+      <div class="dialog-actions">
+        <button type="button" class="text-button state-layer" data-dialog="cancel">${cancelLabel}</button>
+        <button type="submit" class="text-button state-layer">${confirmLabel}</button>
+      </div>
+    </form>`;
+  const close = () => { if (dialog.open) dialog.close(); dialog.remove(); };
+  dialog.querySelector('[data-dialog="cancel"]').addEventListener("click", close);
+  dialog.addEventListener("click", event => { if (event.target === dialog) close(); });
+  dialog.querySelector("form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const submit = dialog.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+      const keepOpen = (await onConfirm?.(dialog)) === false;
+      if (!keepOpen) close();
+    } finally {
+      submit.disabled = false;
+    }
+  });
+  document.body.appendChild(dialog);
+  dialog.showModal();
+  if (onOpen) onOpen(dialog); else dialog.querySelector("input, select, textarea, button")?.focus();
+  return dialog;
 }
 
 let snackbarTimer = null;

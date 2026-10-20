@@ -54,3 +54,23 @@ def test_valida_valores(client):
 
 def test_operador_inexistente(client):
     assert client.patch("/api/operadores/999", json={"perfil": "OPERADOR"}).status_code == 404
+
+
+def _produto(client, vendedor_id):
+    return client.post(
+        f"/api/produtos?operador_id={client.operador['id']}",
+        json={"loja_id": client.operador["loja_id"], "usuario_vendedor_id": vendedor_id, "nome": "Raquete"},
+    )
+
+
+def test_operador_nao_pode_vender(client):
+    r = _produto(client, client.operador["usuario_id"])
+    assert r.status_code == 400
+    assert r.json()["detail"] == "Operadores de loja não podem vender produtos"
+
+
+def test_cliente_pode_vender(client):
+    cliente = client.post("/api/usuarios", json={"nome": "Bia", "email": "bia@example.com"}).json()
+    r = _produto(client, cliente["id"])
+    assert r.status_code == 201
+    assert r.json()["status"] == "RECEBIDO"

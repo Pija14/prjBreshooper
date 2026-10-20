@@ -65,10 +65,13 @@ export function homeView({ usuario, lojas = [] }) {
     </div>`;
 }
 
-export function accountMenuView(usuario) {
+// lojas/lojaAtual: na área da loja, permite trocar entre as lojas em que o usuário atua.
+export function accountMenuView(usuario, { lojas = [], lojaAtual = null } = {}) {
+  const outras = lojas.filter(l => l.loja_id !== lojaAtual);
   return `
     <div class="menu" role="menu" aria-label="Conta">
       <div class="menu-header">${avatarView(usuario)}<span><strong>${esc(usuario?.nome)}</strong><span>${esc(usuario?.email)}</span></span></div>
+      ${lojaAtual ? outras.map(l => `<button class="menu-item state-layer" role="menuitem" data-action="switch-store" data-id="${l.loja_id}">${icon("swap")}Ir para ${esc(l.loja_nome)}</button>`).join("") : ""}
       <button class="menu-item state-layer" role="menuitem" data-action="logout">${icon("logout")}Sair da conta</button>
     </div>`;
 }

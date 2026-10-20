@@ -57,6 +57,10 @@ def create_product(
     if vendedor.status != "ATIVO":
         raise HTTPException(status_code=400, detail="Usuário vendedor está inativo")
 
+    # Operadores atuam pela loja: não vendem nem compram produtos.
+    if db.scalar(select(Operator.id).where(Operator.usuario_id == vendedor.id, Operator.status == "ATIVO")):
+        raise HTTPException(status_code=400, detail="Operadores de loja não podem vender produtos")
+
     if payload.categoria_id is not None:
         categoria = db.get(Category, payload.categoria_id)
         if not categoria or categoria.status != "ATIVO":

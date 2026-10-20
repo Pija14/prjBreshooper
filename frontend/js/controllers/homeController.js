@@ -1,6 +1,9 @@
-// Controller da área autenticada: renderiza a tela inicial e o menu da conta.
+// Controller da área autenticada: escolhe a área (loja ou cliente) e cuida do menu da conta.
+// Operadores atuam pela loja e não compram nem vendem: veem somente a área da loja.
 import { signOut } from "../services/auth.js";
+import { selectedStoreId } from "../services/store.js";
 import { accountMenuView, homeView } from "../views/homeView.js";
+import { renderStoreArea } from "./operatorController.js";
 
 let onSignedOut = () => {};
 let currentSession = null;
@@ -12,7 +15,9 @@ function closeMenu() {
 
 function toggleMenu(button) {
   if (document.querySelector(".menu")) { closeMenu(); return; }
-  button.insertAdjacentHTML("afterend", accountMenuView(currentSession?.usuario));
+  const lojas = currentSession?.lojas || [];
+  const lojaAtual = lojas.length ? selectedStoreId(lojas) : null;
+  button.insertAdjacentHTML("afterend", accountMenuView(currentSession?.usuario, { lojas, lojaAtual }));
   button.setAttribute("aria-expanded", "true");
   document.querySelector('.menu [role="menuitem"]')?.focus();
 }
@@ -20,12 +25,14 @@ function toggleMenu(button) {
 function logout() {
   closeMenu();
   signOut();
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
   onSignedOut();
 }
 
 export function renderHome(app, session, { onLogout } = {}) {
   currentSession = session;
   onSignedOut = onLogout || onSignedOut;
+  if (session.lojas?.length) { renderStoreArea(app, session); return; }
   app.innerHTML = homeView(session);
 }
 

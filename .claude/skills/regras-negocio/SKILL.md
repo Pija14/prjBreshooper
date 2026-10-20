@@ -28,6 +28,7 @@ Uma pessoa entrega um produto usado a uma **loja parceira**; um **operador** da 
 
 1. **Não existe entidade "vendedor"** — o vendedor é um `usuario` (campo `usuario_vendedor_id` no produto).
 2. **Operador pertence a uma loja** e só opera produtos **da própria loja**, e somente se estiver `ATIVO`.
+   - **Operador não vende nem compra.** Um operador ativo nunca é `usuario_vendedor_id` de produto (a API retorna 400) e, no app, vê só a Área da loja — sem saldo e sem comprar/vender.
 3. **Produto exige categoria e marca por ID** (cadastros próprios, não texto livre).
 4. **Uma avaliação por produto** (restrição única `uq_avaliacoes_produto`).
 5. **A divisão fecha exatamente:** `valor_usuario + valor_loja == valor_venda`, sem tolerância. Valores monetários são `Decimal`/`Numeric(12,2)` — **nunca `float`**.
