@@ -139,11 +139,13 @@ export const EXPENSE_FILTERS = [
   { id: "TODOS", label: "Todos" },
 ];
 
-function payoutItemView(r) {
+function payoutItemView(r, expanded) {
   const pago = r.status === "PAGO";
   const forma = FORMAS[r.forma_pagamento];
+  const split = { venda: toCents(r.valor_venda), cliente: toCents(r.valor), loja: toCents(r.valor_loja) };
   return `
-    <article class="list-item payout-item">
+    <article class="list-item payout-item product-item is-expandable${expanded ? " is-expanded" : ""}" data-action="toggle-expense" data-id="${r.id}">
+      <div class="product-main" role="button" tabindex="0" aria-expanded="${expanded}" aria-controls="expense-${r.id}" aria-label="${esc(r.vendedor_nome)}, ${esc(r.produto_nome)}: ${expanded ? "ocultar" : "ver"} divisão de valores">
       <span class="list-icon${pago ? "" : " is-pending"}">${icon(pago ? "check" : "hourglass")}</span>
       <span class="list-text">
         <strong>${esc(r.vendedor_nome)}</strong>
@@ -152,14 +154,17 @@ function payoutItemView(r) {
           ? `<span class="product-seller">${icon(forma?.icon || "check", "icon icon-sm")}Pago via ${esc(forma?.label || r.forma_pagamento)} · ${esc(DATA_HORA.format(new Date(r.pago_em)))}</span>`
           : `<span class="status-chip status-tertiary">A pagar</span>`}
       </span>
+      </div>
       <span class="product-trailing">
         <strong class="product-price">${formatBRL(r.valor)}</strong>
         ${pago ? "" : `<button class="filled-button state-layer" data-action="pay" data-id="${r.id}">Pagar</button>`}
       </span>
+      <span class="expand-icon" aria-hidden="true">${icon("expand")}</span>
+      ${expanded ? `<div class="product-details" id="expense-${r.id}">${splitPreviewView(split, { clienteLabel: "Vendedor" })}</div>` : ""}
     </article>`;
 }
 
-export function storeExpensesView({ filter, list, error }) {
+export function storeExpensesView({ filter, list, error, expandedId = null }) {
   const header = `<header class="greeting"><p>Parte dos vendedores nas vendas</p><h1>Despesas</h1></header>`;
   if (error) return page("despesas", header, errorView(error, "expenses-reload"));
   if (!list) return page("despesas", header, loadingView("Carregando os pagamentos…"));
@@ -181,7 +186,7 @@ export function storeExpensesView({ filter, list, error }) {
       ${EXPENSE_FILTERS.map(f => `<button class="filter-chip state-layer${filter === f.id ? " is-selected" : ""}" data-action="expenses-filter" data-filter="${f.id}" aria-pressed="${filter === f.id}">${filter === f.id ? icon("check", "icon icon-sm") : ""}${f.label}</button>`).join("")}
     </div>`,
     shown.length
-      ? `<section class="list" aria-label="Pagamentos aos vendedores">${shown.map(payoutItemView).join("")}</section>`
+      ? `<section class="list" aria-label="Pagamentos aos vendedores">${shown.map(r => payoutItemView(r, r.id === expandedId)).join("")}</section>`
       : `<div class="empty-state"><span class="empty-icon">${icon("trendingDown")}</span><strong>${empty[0]}</strong><span>${empty[1]}</span></div>`);
 }
 

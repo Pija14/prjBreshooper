@@ -83,7 +83,9 @@ class RepasseResponse(BaseModel):
     usuario_id: int
     vendedor_nome: str
     vendedor_email: str
-    valor: Decimal
+    valor: Decimal                  # parte do vendedor (o que a loja paga)
+    valor_venda: Decimal            # da venda, para mostrar a divisão
+    valor_loja: Decimal
     status: str
     forma_pagamento: str | None
     pago_em: DataHoraUTC | None

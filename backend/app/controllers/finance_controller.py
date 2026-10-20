@@ -148,7 +148,7 @@ def _repasse_response(repasse: Payout, venda: Sale, produto: Product, vendedor: 
     return RepasseResponse(
         id=repasse.id, venda_id=venda.id, referencia=venda.referencia, venda_data_hora=venda.data_hora,
         produto_nome=produto.nome, usuario_id=vendedor.id, vendedor_nome=vendedor.nome, vendedor_email=vendedor.email,
-        valor=repasse.valor, status=repasse.status, forma_pagamento=repasse.forma_pagamento, pago_em=repasse.pago_em,
+        valor=repasse.valor, valor_venda=venda.valor_venda, valor_loja=venda.valor_loja, status=repasse.status, forma_pagamento=repasse.forma_pagamento, pago_em=repasse.pago_em,
     )
 
 

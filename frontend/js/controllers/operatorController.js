@@ -17,7 +17,7 @@ import { centsToDecimalString, esc, formatBRL, formatCents, icon, openDialog, pa
 const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "", expandedId: null,
   finance: { period: "MES", data: null, error: null, request: 0 },
   expenses: { filter: "PENDENTE", list: null, error: null, request: 0 },
-  incomeExpandedId: null };
+  incomeExpandedId: null, expenseExpandedId: null };
 
 function byId(list) { return new Map((list || []).map(x => [x.id, x])); }
 
@@ -139,7 +139,7 @@ async function showExpenses() {
     if (request !== e.request) return;
     e.error = errorText(err);
   }
-  if (location.hash === "#/despesas") paint(storeExpensesView(e));
+  if (location.hash === "#/despesas") paintExpenses();
 }
 
 function payoutDialog(button) {
@@ -437,6 +437,19 @@ function toggleDetails(card, event) {
   document.querySelector(`[data-action="toggle-details"][data-id="${id}"] .product-main`)?.focus({ preventScroll: true });
 }
 
+const paintExpenses = () => paint(storeExpensesView({ ...state.expenses, expandedId: state.expenseExpandedId }));
+
+// Despesas: abre/fecha a divisão vendedor/loja da venda que originou o pagamento.
+function toggleExpense(card, event) {
+  if (event?.target.closest?.(".product-details")) return;
+  const id = Number(card.dataset.id);
+  state.expenseExpandedId = state.expenseExpandedId === id ? null : id;
+  const y = window.scrollY;
+  paintExpenses();
+  window.scrollTo(0, y);
+  document.querySelector(`[data-action="toggle-expense"][data-id="${id}"] .product-main`)?.focus({ preventScroll: true });
+}
+
 // Receitas: abre/fecha a divisão vendedor/loja de uma venda.
 function toggleIncome(card, event) {
   if (event?.target.closest?.(".product-details")) return;
@@ -454,6 +467,7 @@ document.addEventListener("keydown", event => {
     event.preventDefault();
     const card = event.target.closest("[data-action]");
     if (card?.dataset.action === "toggle-income") toggleIncome(card);
+    else if (card?.dataset.action === "toggle-expense") toggleExpense(card);
     else if (card) toggleDetails(card);
   }
 });
@@ -462,9 +476,10 @@ export const operatorActions = {
   filter: button => { state.filter = button.dataset.filter; state.expandedId = null; showDashboard(); },
   "toggle-details": toggleDetails,
   "toggle-income": toggleIncome,
+  "toggle-expense": toggleExpense,
   "finance-period": button => { state.finance.period = button.dataset.period; state.incomeExpandedId = null; showFinance(location.hash === "#/receitas" ? "receitas" : "inicio"); },
   "finance-reload": () => showFinance(location.hash === "#/receitas" ? "receitas" : "inicio"),
-  "expenses-filter": button => { state.expenses.filter = button.dataset.filter; paint(storeExpensesView(state.expenses)); },
+  "expenses-filter": button => { state.expenses.filter = button.dataset.filter; state.expenseExpandedId = null; paintExpenses(); },
   "expenses-reload": () => showExpenses(),
   pay: payoutDialog,
   "go-receive": () => go("#/receber"),

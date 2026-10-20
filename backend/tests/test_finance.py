@@ -74,6 +74,7 @@ def test_venda_gera_repasse_pendente_sem_creditar_carteira(client):
     [rep] = repasses(client)
     assert (rep["status"], rep["valor"], rep["forma_pagamento"], rep["pago_em"]) == ("PENDENTE", "600.00", None, None)
     assert rep["referencia"] == venda["referencia"] and rep["vendedor_nome"] == "Bia" and rep["produto_nome"] == "Raquete"
+    assert (rep["valor_venda"], rep["valor_loja"]) == ("1000.00", "400.00")
     c = conta(client, client.vendedor["id"])
     assert (c["saldo"], c["a_receber"], c["movimentacoes"]) == ("0.00", "600.00", [])
 
