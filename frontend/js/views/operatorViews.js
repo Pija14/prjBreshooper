@@ -16,19 +16,28 @@ export const FILTERS = [
 export const CONDITIONS = ["Novo", "Seminovo", "Usado", "Com avarias"];
 const PERFIS = { ADMINISTRADOR: "Administrador", OPERADOR: "Operador" };
 
-// Menu lateral (navigation drawer M3): modal no celular, fixo em telas largas.
+// Menu lateral (navigation drawer M3): modal no celular; no desktop, fixo e recolhível (navigation rail).
 const DRAWER = [
   { id: "inicio", href: "#/", icon: "home", label: "Início" },
   { id: "produtos", href: "#/produtos", icon: "inventory", label: "Produtos" },
-  { section: "Financeiro" },
-  { id: "despesas", href: "#/despesas", icon: "trendingDown", label: "Despesas", sub: true },
-  { id: "receitas", href: "#/receitas", icon: "trendingUp", label: "Receitas", sub: true },
+  { group: "financeiro", icon: "wallet", label: "Financeiro", items: [
+    { id: "despesas", href: "#/despesas", icon: "trendingDown", label: "Despesas" },
+    { id: "receitas", href: "#/receitas", icon: "trendingUp", label: "Receitas" },
+  ] },
   { divider: true },
   { id: "clientes", href: "#/clientes", icon: "group", label: "Clientes" },
   { id: "relatorios", href: "#/relatorios", icon: "barChart", label: "Relatórios", badge: "Em breve" },
 ];
 
-function storeDrawerView(active, loja) {
+function drawerLink(item, active, sub = false) {
+  const current = active === item.id;
+  return `<a class="drawer-item state-layer${sub ? " is-sub" : ""}${current ? " is-active" : ""}" href="${item.href}" data-action="drawer-link" title="${item.label}"${current ? ' aria-current="page"' : ""}>
+    <span class="drawer-icon">${icon(item.icon)}</span><span class="drawer-label">${item.label}</span>${item.badge ? `<span class="drawer-badge">${item.badge}</span>` : ""}
+  </a>`;
+}
+
+// financeOpen: grupo Financeiro aberto (sempre aberto quando a tela atual é Despesas ou Receitas).
+function storeDrawerView(active, loja, { financeOpen = false } = {}) {
   return `
     <div class="drawer-scrim" data-action="close-drawer"></div>
     <nav class="drawer" id="storeDrawer" aria-label="Menu da loja">
@@ -37,23 +46,30 @@ function storeDrawerView(active, loja) {
         <span class="store-heading"><span class="store-overline">Área da loja</span><span class="drawer-store">${esc(loja.loja_nome)}</span></span>
       </div>
       ${DRAWER.map(item => {
-        if (item.section) return `<p class="drawer-section" id="drawer-${item.section}">${item.section}</p>`;
         if (item.divider) return `<hr class="drawer-divider">`;
-        const current = active === item.id;
-        return `<a class="drawer-item state-layer${item.sub ? " is-sub" : ""}${current ? " is-active" : ""}" href="${item.href}" data-action="drawer-link"${current ? ' aria-current="page"' : ""}>
-          ${icon(item.icon)}<span class="drawer-label">${item.label}</span>${item.badge ? `<span class="drawer-badge">${item.badge}</span>` : ""}
-        </a>`;
+        if (!item.group) return drawerLink(item, active);
+        const childActive = item.items.some(i => i.id === active);
+        const open = financeOpen || childActive;
+        return `
+          <div class="drawer-group${open ? " is-open" : ""}${childActive ? " has-active" : ""}">
+            <button type="button" class="drawer-item drawer-group-toggle state-layer" data-action="toggle-drawer-group" aria-expanded="${open}" aria-controls="drawer-group-${item.group}">
+              <span class="drawer-icon">${icon(item.icon)}</span><span class="drawer-label">${item.label}</span><span class="drawer-chevron">${icon("expand")}</span>
+            </button>
+            <div class="drawer-group-items" id="drawer-group-${item.group}" role="group" aria-label="${item.label}">
+              ${item.items.map(i => drawerLink(i, active, true)).join("")}
+            </div>
+          </div>`;
       }).join("")}
     </nav>`;
 }
 
 // Moldura da área da loja: botão do menu, loja atual, menu da conta e menu lateral.
-export function storeShellView({ usuario, loja, content, active }) {
+export function storeShellView({ usuario, loja, content, active, financeOpen }) {
   return `
     <div class="app-shell store-shell">
       <header class="top-app-bar">
         <div class="brand">
-          <button class="icon-button state-layer menu-button" data-action="open-drawer" aria-label="Abrir menu" aria-controls="storeDrawer" aria-expanded="false">${icon("menu")}</button>
+          <button class="icon-button state-layer menu-button" data-action="toggle-drawer" aria-label="Menu" aria-controls="storeDrawer" aria-expanded="false">${icon("menu")}</button>
           ${brandMark(36)}
           <span class="store-heading"><span class="store-overline">Área da loja</span><span class="store-name">${esc(loja.loja_nome)}</span></span>
         </div>
@@ -61,7 +77,7 @@ export function storeShellView({ usuario, loja, content, active }) {
       </header>
       ${content}
     </div>
-    ${storeDrawerView(active, loja)}`;
+    ${storeDrawerView(active, loja, { financeOpen })}`;
 }
 
 function statusChip(status) {
@@ -143,7 +159,7 @@ export function storeDashboardView({ usuario, loja, counts, filter, items, expan
       </div>
 
       ${filtered.length
-        ? `<section class="list" aria-label="Produtos">${filtered.map(i => productItemView(i.produto, { ...i, expanded: i.produto.id === expandedId })).join("")}</section>`
+        ? `<section class="list card-grid" aria-label="Produtos">${filtered.map(i => productItemView(i.produto, { ...i, expanded: i.produto.id === expandedId })).join("")}</section>`
         : `<div class="empty-state"><span class="empty-icon">${icon("receive")}</span><strong>${empty[0]}</strong><span>${empty[1]}</span></div>`}
     </main>
     <button class="fab state-layer" data-action="go-receive">${icon("receive")}<span>Receber produto</span></button>`;

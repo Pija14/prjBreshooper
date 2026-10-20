@@ -39,7 +39,8 @@ function activeSection() {
 }
 
 function paint(content) {
-  state.app.innerHTML = storeShellView({ usuario: state.session.usuario, loja: state.loja, content, active: activeSection() });
+  state.app.innerHTML = storeShellView({ usuario: state.session.usuario, loja: state.loja, content, active: activeSection(), financeOpen: menuPrefs.financeOpen });
+  syncMenuButton();
   // Linha de períodos com rolagem: mantém o chip selecionado visível (sem rolar a página).
   const row = state.app.querySelector(".chip-scroll");
   const chip = row?.querySelector(".is-selected");
@@ -367,18 +368,60 @@ function showClients() {
 }
 
 // ---------- Menu lateral ----------
+// Celular/tablet: o ☰ abre o menu por cima da tela. Desktop (≥ 1024 px): o menu fica fixo e o ☰ o recolhe
+// para uma faixa só com ícones (navigation rail). As preferências ficam salvas neste aparelho.
+const DESKTOP = window.matchMedia("(min-width: 1024px)");
+const PREFS_KEY = "breshopper.menu";
+const menuPrefs = (() => {
+  try { return { rail: false, financeOpen: false, ...JSON.parse(localStorage.getItem(PREFS_KEY) || "{}") }; } catch { return { rail: false, financeOpen: false }; }
+})();
+const savePrefs = () => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(menuPrefs)); } catch { /* sem armazenamento */ } };
+document.body.classList.toggle("drawer-rail", menuPrefs.rail);
+
+function syncMenuButton() {
+  const button = document.querySelector(".menu-button");
+  if (!button) return;
+  const expanded = DESKTOP.matches ? !menuPrefs.rail : document.body.classList.contains("drawer-open");
+  button.setAttribute("aria-expanded", String(expanded));
+  button.setAttribute("aria-label", DESKTOP.matches ? (menuPrefs.rail ? "Expandir menu" : "Recolher menu") : (expanded ? "Fechar menu" : "Abrir menu"));
+  button.title = button.getAttribute("aria-label");
+}
+
 function openDrawer() {
   document.body.classList.add("drawer-open");
-  document.querySelector(".menu-button")?.setAttribute("aria-expanded", "true");
+  syncMenuButton();
   (document.querySelector(".drawer-item.is-active") || document.querySelector(".drawer-item"))?.focus();
 }
 
 function closeDrawer({ restoreFocus = true } = {}) {
   if (!document.body.classList.contains("drawer-open")) return;
   document.body.classList.remove("drawer-open");
-  document.querySelector(".menu-button")?.setAttribute("aria-expanded", "false");
+  syncMenuButton();
   if (restoreFocus) document.querySelector(".menu-button")?.focus();
 }
+
+function toggleDrawer() {
+  if (DESKTOP.matches) {
+    menuPrefs.rail = !menuPrefs.rail;
+    savePrefs();
+    document.body.classList.toggle("drawer-rail", menuPrefs.rail);
+    syncMenuButton();
+  } else if (document.body.classList.contains("drawer-open")) closeDrawer();
+  else openDrawer();
+}
+
+// Abre/fecha o grupo Financeiro sem redesenhar a tela.
+function toggleDrawerGroup(button) {
+  const group = button.closest(".drawer-group");
+  const open = !group.classList.contains("is-open");
+  group.classList.toggle("is-open", open);
+  button.setAttribute("aria-expanded", String(open));
+  menuPrefs.financeOpen = open;
+  savePrefs();
+}
+
+// Ao cruzar 1024 px: o menu por cima da tela fecha e o botão passa a recolher/expandir.
+DESKTOP.addEventListener("change", () => { document.body.classList.remove("drawer-open"); syncMenuButton(); });
 
 document.addEventListener("keydown", event => { if (event.key === "Escape") closeDrawer(); });
 window.addEventListener("hashchange", () => document.body.classList.remove("drawer-open"));
@@ -608,7 +651,8 @@ export const operatorActions = {
   "new-customer": () => newCustomer(),
   "new-client": () => newCustomer(() => showClients()),
   "edit-client": editCustomer,
-  "open-drawer": openDrawer,
+  "toggle-drawer": toggleDrawer,
+  "toggle-drawer-group": toggleDrawerGroup,
   "close-drawer": () => closeDrawer(),
   "drawer-link": () => closeDrawer({ restoreFocus: false }),
   "new-category": () => newNamed({ title: "Nova categoria", label: "Nome da categoria", create: createCategory, list: "categorias", field: "categoria" }),

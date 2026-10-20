@@ -26,6 +26,7 @@ function toggleMenu(button) {
 function logout() {
   closeMenu();
   signOut();
+  document.body.classList.remove("drawer-open", "drawer-rail");
   if (location.hash) history.replaceState(null, "", location.pathname + location.search);
   onSignedOut();
 }

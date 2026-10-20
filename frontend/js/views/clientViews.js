@@ -37,7 +37,7 @@ export function clientListView(clients, stats, query) {
   if (!shown.length) {
     return `<div class="empty-state"><span class="empty-icon">${icon("search")}</span><strong>Nenhum cliente encontrado</strong><span>Confira a busca ou cadastre um novo cliente.</span></div>`;
   }
-  return `<div class="list">${shown.map(c => clientItemView(c, stats)).join("")}</div>`;
+  return `<div class="list card-grid">${shown.map(c => clientItemView(c, stats)).join("")}</div>`;
 }
 
 export function clientCountText(clients, query) {

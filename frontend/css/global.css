@@ -410,11 +410,12 @@ h1, h2, h3, p { margin: 0; overflow-wrap: anywhere; }
   box-shadow: var(--elevation-2); font-size: 14px; font-weight: 500; letter-spacing: .1px;
 }
 
-/* ---------- Menu lateral (navigation drawer) ---------- */
+/* ---------- Menu lateral (navigation drawer) — mobile first ---------- */
+/* Base (celular e tablet): menu modal por cima da tela, aberto pelo ☰. */
 .menu-button { margin-left: -8px; }
 .drawer {
   position: fixed; z-index: 40; top: 0; bottom: 0; left: 0;
-  width: min(320px, calc(100vw - 56px)); overflow-y: auto;
+  width: min(320px, calc(100vw - 56px)); overflow-y: auto; overflow-x: hidden;
   display: flex; flex-direction: column; gap: 2px;
   padding: max(12px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
   border-radius: 0 var(--shape-lg) var(--shape-lg) 0;
@@ -429,32 +430,90 @@ h1, h2, h3, p { margin: 0; overflow-wrap: anywhere; }
 body.drawer-open .drawer { transform: none; visibility: visible; transition: transform var(--duration-medium) var(--ease-emphasized); }
 body.drawer-open .drawer-scrim { opacity: .32; pointer-events: auto; }
 body.drawer-open { overflow: hidden; }
-.drawer-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px 16px; }
+.drawer-header { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 16px 16px; }
+.drawer-header .brand-mark { flex: none; }
 .drawer-store { font-size: 16px; line-height: 24px; font-weight: 500; overflow-wrap: anywhere; }
 .drawer-item {
-  display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 24px 0 16px;
-  border-radius: var(--shape-full); color: var(--md-sys-color-on-surface-variant);
+  width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 24px 0 16px;
+  border-radius: var(--shape-full); color: var(--md-sys-color-on-surface-variant); text-align: left;
   text-decoration: none; font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: .1px;
 }
+.drawer-icon { display: grid; place-items: center; flex: none; }
+.drawer-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .drawer-item.is-sub { padding-left: 32px; }
-.drawer-label { flex: 1; }
 .drawer-item.is-active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 .drawer-item:focus-visible { outline: 3px solid var(--md-sys-color-secondary); outline-offset: -3px; }
-.drawer-section { margin: 12px 0 4px; padding: 0 16px; color: var(--md-sys-color-on-surface-variant); font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: .1px; }
 .drawer-divider { width: calc(100% - 32px); margin: 8px 16px; border: 0; border-top: 1px solid var(--md-sys-color-outline-variant); }
 .drawer-badge {
-  padding: 2px 8px; border-radius: var(--shape-sm);
+  flex: none; padding: 2px 8px; border-radius: var(--shape-sm);
   background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container);
   font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: .5px;
 }
 
-/* Telas largas: menu fixo à esquerda, sem botão nem fundo escurecido. */
-@media (min-width: 1200px) {
-  .top-app-bar .menu-button, .drawer-scrim { display: none; }
-  .store-shell .top-app-bar .brand-mark { display: none; }
-  .drawer { transform: none; visibility: visible; transition: none; width: 300px; border-radius: 0; box-shadow: none; border-right: 1px solid var(--md-sys-color-outline-variant); }
-  .store-shell { margin-left: calc(300px + max(24px, (100vw - 300px - 720px) / 2)); }
+/* Grupo recolhível (Financeiro) */
+.drawer-group-toggle { cursor: pointer; }
+.drawer-group.has-active > .drawer-group-toggle { color: var(--md-sys-color-on-surface); }
+.drawer-chevron { display: grid; transition: transform var(--duration-medium) var(--ease-emphasized); }
+.drawer-group.is-open .drawer-chevron { transform: rotate(180deg); }
+.drawer-group-items { display: none; gap: 2px; }
+.drawer-group.is-open .drawer-group-items { display: grid; animation: rise var(--duration-medium) var(--ease-decelerate) both; }
+
+/* ---------- Layout responsivo da Área da loja ---------- */
+/* Base: uma coluna (as colunas do Início só se separam no desktop). */
+.dash-grid, .dash-col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+
+/* Tablet (≥ 600 px): mais respiro lateral. */
+@media (min-width: 600px) {
+  .store-shell .page { padding-inline: 24px; }
+  .store-shell .top-app-bar { padding-inline: 16px 12px; }
+}
+
+/* Desktop (≥ 1024 px): menu fixo à esquerda, recolhível; conteúdo usa a largura disponível. */
+@media (min-width: 1024px) {
+  .drawer-scrim { display: none; }
+  .drawer {
+    transform: none; visibility: visible; width: 280px; border-radius: 0; box-shadow: none;
+    border-right: 1px solid var(--md-sys-color-outline-variant);
+    transition: width var(--duration-medium) var(--ease-emphasized), padding var(--duration-medium) var(--ease-emphasized);
+  }
   body.drawer-open { overflow: auto; }
+  .store-shell {
+    width: auto; max-width: none; margin: 0 0 0 280px;
+    transition: margin-left var(--duration-medium) var(--ease-emphasized);
+  }
+  .store-shell .top-app-bar { padding: 8px 24px; }
+  .store-shell .top-app-bar .brand-mark { display: none; }
+  .store-shell .page { max-width: 1120px; margin-inline: auto; padding: 8px 32px 48px; }
+  .store-shell .form-page { max-width: 760px; }
+  .store-shell .statement { max-width: 880px; }
+  .store-shell .menu { right: 24px; }
+  .store-shell .fab { right: 32px; bottom: 32px; }
+
+  /* Menu recolhido: faixa só com ícones e rótulos curtos (navigation rail). */
+  body.drawer-rail .drawer { width: 88px; padding-inline: 8px; }
+  body.drawer-rail .store-shell { margin-left: 88px; }
+  body.drawer-rail .drawer-header { justify-content: center; padding-inline: 0; }
+  body.drawer-rail .drawer-header .store-heading,
+  body.drawer-rail .drawer-badge,
+  body.drawer-rail .drawer-group-toggle,
+  body.drawer-rail .drawer-chevron { display: none; }
+  body.drawer-rail .drawer-group-items { display: grid; animation: none; }
+  body.drawer-rail .drawer-item {
+    flex-direction: column; justify-content: center; gap: 4px; min-height: 64px; padding: 8px 0;
+    border-radius: var(--shape-lg); text-align: center; font-size: 12px; line-height: 16px;
+  }
+  body.drawer-rail .drawer-item.is-sub { padding-left: 0; }
+  body.drawer-rail .drawer-label { flex: none; max-width: 100%; }
+  body.drawer-rail .drawer-divider { width: 100%; margin-inline: 0; }
+
+  /* Início em duas colunas; produtos e clientes em grade. */
+  .dash-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  .card-grid > .list-item { border-radius: var(--shape-lg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer, .store-shell { transition: none; }
 }
 
 /* ---------- Clientes ---------- */
@@ -648,10 +707,14 @@ textarea.input { min-height: 96px; resize: vertical; }
 .dialog-text strong { color: var(--md-sys-color-on-surface); font-weight: 500; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
-@media (max-width: 420px) {
-  .kpi { padding: 12px 10px 10px; }
-  .kpi strong { font-size: 28px; line-height: 36px; }
-  .field-row > button { padding: 0 12px; }
+/* Mobile first: telas pequenas são a base; a partir de 421 px os blocos ganham respiro. */
+.kpi { padding: 12px 10px 10px; }
+.kpi strong { font-size: 28px; line-height: 36px; }
+.field-row > button { padding: 0 12px; }
+@media (min-width: 421px) {
+  .kpi { padding: 16px 12px 12px; }
+  .kpi strong { font-size: 32px; line-height: 40px; }
+  .field-row > button { padding: 0 16px; }
 }
 
 /* ---------- Camadas de estado (M3) ---------- */

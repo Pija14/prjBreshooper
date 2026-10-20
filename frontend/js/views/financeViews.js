@@ -115,6 +115,8 @@ export function storeHomeView({ usuario, loja, period, custom, data, error }) {
   const r = data.resumo;
   const pendente = Number(r.a_pagar_vendedores) > 0;
   return page("inicio", header, `
+    <div class="dash-grid">
+    <div class="dash-col">
     <section class="finance-hero" aria-label="Receitas do período">
       <span class="balance-label">${icon("trendingUp")}Receitas (vendas)</span>
       <strong class="balance-value">${formatBRL(r.total_vendido)}</strong>
@@ -135,6 +137,8 @@ export function storeHomeView({ usuario, loja, period, custom, data, error }) {
       </span>
       <span class="payable-go">${icon("chevronRight")}</span>
     </a>
+    </div>
+    <div class="dash-col">
 
     ${r.quantidade_vendas ? `
     <section class="split-preview" aria-label="Divisão das vendas do período">
@@ -151,7 +155,9 @@ export function storeHomeView({ usuario, loja, period, custom, data, error }) {
             <strong class="product-price">${formatBRL(v.total_vendedor)}</strong>
           </div>`).join("")}
       </div>
-    </section>` : `<div class="empty-state"><span class="empty-icon">${icon("trendingUp")}</span><strong>Nenhuma venda neste período</strong><span>As vendas registradas pela loja aparecem aqui.</span></div>`}`);
+    </section>` : `<div class="empty-state"><span class="empty-icon">${icon("trendingUp")}</span><strong>Nenhuma venda neste período</strong><span>As vendas registradas pela loja aparecem aqui.</span></div>`}
+    </div>
+    </div>`);
 }
 
 // ---------- Receitas: vendas do período ----------
