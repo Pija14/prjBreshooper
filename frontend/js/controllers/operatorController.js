@@ -1,16 +1,16 @@
 // Controller da área da loja (operador): painel, recebimento e avaliação de produtos.
-// Rotas por hash para o botão "voltar" do celular funcionar: #/ (painel), #/receber, #/avaliar/<id>.
+// Rotas por hash para o botão "voltar" do celular funcionar: #/ (painel), #/receber, #/avaliar/<id>, #/vender/<id>.
 import { ApiError } from "../services/api.js";
 import {
   createBrand, createCategory, createCustomer, evaluateProduct, loadStoreData,
-  receiveProduct, rememberStore, selectedStoreId, sellerCandidates,
+  receiveProduct, registerSale, rememberStore, selectedStoreId, sellerCandidates,
 } from "../services/store.js";
 import {
-  customerDialogContent, evaluateProductView, nameDialogContent, receiveProductView,
+  customerDialogContent, evaluateProductView, nameDialogContent, receiveProductView, sellProductView,
   splitPreviewView, storeDashboardView, storeShellView,
 } from "../views/operatorViews.js";
 import { bannerView } from "../views/authViews.js";
-import { centsToDecimalString, esc, formatCents, icon, openDialog, parseBRLToCents, showSnackbar } from "../views/ui.js";
+import { centsToDecimalString, esc, formatBRL, formatCents, icon, openDialog, parseBRLToCents, showSnackbar } from "../views/ui.js";
 
 const state = { app: null, session: null, loja: null, data: null, filter: "RECEBIDO", condition: "" };
 
@@ -50,17 +50,29 @@ async function reload() {
 
 function items() {
   const users = byId(state.data.usuarios), cats = byId(state.data.categorias), brands = byId(state.data.marcas);
+  const sales = new Map(state.data.vendas.map(v => [v.produto_id, v]));
+  const evals = new Map(state.data.avaliacoes.map(a => [a.produto_id, a]));
   return [...state.data.produtos]
     .sort((a, b) => b.id - a.id)
-    .map(produto => ({ produto, vendedor: users.get(produto.usuario_vendedor_id), categoria: cats.get(produto.categoria_id), marca: brands.get(produto.marca_id) }));
+    .map(produto => ({
+      produto,
+      vendedor: users.get(produto.usuario_vendedor_id),
+      categoria: cats.get(produto.categoria_id),
+      marca: brands.get(produto.marca_id),
+      avaliacao: evals.get(produto.id),
+      venda: sales.get(produto.id),
+      comprador: users.get(sales.get(produto.id)?.usuario_comprador_id),
+    }));
 }
 
 function route() {
   if (!state.data) return;
   const hash = location.hash;
   const avaliar = hash.match(/^#\/avaliar\/(\d+)$/);
+  const vender = hash.match(/^#\/vender\/(\d+)$/);
   if (hash === "#/receber") return showReceive();
   if (avaliar) return showEvaluate(Number(avaliar[1]));
+  if (vender) return showSell(Number(vender[1]));
   showDashboard();
 }
 
@@ -150,7 +162,7 @@ function dialogError(dialog, id, message) {
   if (support) support.textContent = message;
 }
 
-function newCustomer() {
+function newCustomer(onCreated = usuario => showReceive({ ...readReceiveValues(), seller: String(usuario.id) })) {
   openDialog({
     title: "Novo cliente",
     content: customerDialogContent(),
@@ -164,7 +176,7 @@ function newCustomer() {
       try {
         const usuario = await createCustomer({ nome, email });
         state.data.usuarios.push(usuario);
-        showReceive({ ...readReceiveValues(), seller: String(usuario.id) });
+        onCreated(usuario);
         showSnackbar(`Cliente ${usuario.nome} cadastrado.`);
       } catch (err) {
         dialogError(dialog, "dEmail", errorText(err));
@@ -248,15 +260,59 @@ function submitEvaluate(event, item) {
     confirmLabel: "Disponibilizar",
     onConfirm: async () => {
       try {
-        await evaluateProduct(state.loja.operador_id, {
+        const avaliacao = await evaluateProduct(state.loja.operador_id, {
           produtoId: item.produto.id,
           valorVenda: centsToDecimalString(split.venda),
           valorUsuario: centsToDecimalString(split.cliente),
           valorLoja: centsToDecimalString(split.loja),
         });
+        state.data.avaliacoes.push(avaliacao);
         Object.assign(item.produto, { status: "DISPONIVEL", valor_venda: centsToDecimalString(split.venda) });
         state.filter = "DISPONIVEL";
         showSnackbar(`“${item.produto.nome}” está disponível para venda.`);
+        go("#/");
+      } catch (err) {
+        formMessage(errorText(err));
+      }
+    },
+  });
+}
+
+// ---------- Vender ----------
+function showSell(produtoId, selected = "") {
+  const item = items().find(i => i.produto.id === produtoId);
+  if (!item || item.produto.status !== "DISPONIVEL") {
+    showSnackbar(item ? "Este produto não está disponível para venda." : "Produto não encontrado nesta loja.");
+    history.replaceState(null, "", "#/");
+    showDashboard();
+    return;
+  }
+  const buyers = sellerCandidates(state.data).filter(u => u.id !== item.produto.usuario_vendedor_id);
+  paint(sellProductView({ ...item, buyers, selected }));
+  document.getElementById("sellForm").addEventListener("submit", event => submitSell(event, item));
+  if (!selected) document.getElementById("fBuyer")?.focus();
+}
+
+function submitSell(event, item) {
+  event.preventDefault();
+  const compradorId = Number(document.getElementById("fBuyer").value);
+  setFieldError("fBuyer", compradorId ? "" : "Selecione o cliente que está comprando.");
+  if (!compradorId) { document.getElementById("fBuyer").focus(); return; }
+  const comprador = state.data.usuarios.find(u => u.id === compradorId);
+  const venda = item.avaliacao?.valor_venda ?? item.produto.valor_venda;
+  openDialog({
+    title: "Registrar venda?",
+    content: `<p class="dialog-text"><strong>${esc(item.produto.nome)}</strong> será vendido para <strong>${esc(comprador?.nome)}</strong> por <strong>${formatBRL(venda)}</strong>.</p>
+      ${item.avaliacao ? `<p class="dialog-text">${esc(item.vendedor?.nome || "O vendedor")} recebe <strong>${formatBRL(item.avaliacao.valor_usuario)}</strong> e a loja <strong>${formatBRL(item.avaliacao.valor_loja)}</strong>.</p>` : ""}
+      <p class="dialog-text">O produto passa a Vendido e a venda não pode ser desfeita.</p>`,
+    confirmLabel: "Registrar venda",
+    onConfirm: async () => {
+      try {
+        const registrada = await registerSale(state.loja.operador_id, { produtoId: item.produto.id, compradorId });
+        state.data.vendas.push(registrada);
+        item.produto.status = "VENDIDO";
+        state.filter = "VENDIDO";
+        showSnackbar(`Venda registrada (${registrada.referencia}).`);
         go("#/");
       } catch (err) {
         formMessage(errorText(err));
@@ -292,8 +348,13 @@ export const operatorActions = {
   "go-receive": () => go("#/receber"),
   "go-dashboard": () => go("#/"),
   evaluate: button => go(`#/avaliar/${button.dataset.id}`),
+  sell: button => go(`#/vender/${button.dataset.id}`),
+  "new-buyer": () => {
+    const produtoId = Number(location.hash.split("/").pop());
+    newCustomer(usuario => showSell(produtoId, String(usuario.id)));
+  },
   "store-reload": reload,
-  "new-customer": newCustomer,
+  "new-customer": () => newCustomer(),
   "new-category": () => newNamed({ title: "Nova categoria", label: "Nome da categoria", create: createCategory, list: "categorias", field: "categoria" }),
   "new-brand": () => newNamed({ title: "Nova marca", label: "Nome da marca", create: createBrand, list: "marcas", field: "marca" }),
   "pick-condition": pickCondition,

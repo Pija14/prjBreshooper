@@ -225,7 +225,7 @@ O frontend segue o Material Design 3 com identidade própria (marca "sacola com 
 
 O login com Google está integrado de ponta a ponta: o botão oficial do Google Identity Services entrega o ID token ao backend, que o valida (assinatura, audiência, emissor, validade e e-mail verificado), cria ou localiza o usuário e emite um token de sessão (JWT). A primeira área autenticada exibe saudação, saldo (ainda R$ 0,00), as próximas ações marcadas como "Em breve" e as lojas em que o usuário é operador.
 
-Operadores entram direto na **Área da loja**: painel com contagem de produtos aguardando avaliação, disponíveis e vendidos (com filtros), **Receber produto** (cliente vendedor, categoria, marca, estado de conservação e descrição, com cadastro rápido de cliente, categoria e marca) e **Avaliar** (valor de venda e parte do cliente; a parte da loja é calculada em centavos para a divisão sempre fechar). As telas usam rotas por hash (`#/`, `#/receber`, `#/avaliar/<id>`) para o botão voltar funcionar. Se o operador atuar em mais de uma loja, troca de loja pelo menu da conta.
+Operadores entram direto na **Área da loja**: painel com contagem de produtos aguardando avaliação, disponíveis e vendidos (com filtros), **Receber produto** (cliente vendedor, categoria, marca, estado de conservação e descrição, com cadastro rápido de cliente, categoria e marca) e **Avaliar** (valor de venda e parte do cliente; a parte da loja é calculada em centavos para a divisão sempre fechar) e **Vender** (o operador registra, em nome da loja, a venda a um cliente comprador). As telas usam rotas por hash (`#/`, `#/receber`, `#/avaliar/<id>`, `#/vender/<id>`) para o botão voltar funcionar. Se o operador atuar em mais de uma loja, troca de loja pelo menu da conta.
 
 Ainda não implementado: proteção por token dos endpoints administrativos existentes (produtos, avaliações, cadastros), que continuam recebendo `operador_id` como parâmetro.
 
@@ -242,7 +242,8 @@ Ainda não implementado: proteção por token dos endpoints administrativos exis
 - [x] Frontend inicial
 - [x] Login com Google (validação no backend + sessão JWT)
 - [x] Área autenticada inicial (saudação, saldo, ações em breve, lojas do operador)
-- [x] Área da loja para operadores (painel, receber produto, avaliar)
+- [x] Área da loja para operadores (painel, receber produto, avaliar, vender)
+- [x] Vendas (`POST /api/vendas`)
 - [x] Identidade visual e PWA (ícones, manifesto, service worker)
 - [x] Publicação do frontend no GitHub Pages
 - [x] Publicação da API no Render
@@ -389,7 +390,9 @@ O MVP pode começar com um catálogo simples, com filtros básicos por:
 
 ---
 
-### Fase 6 — Venda
+### Fase 6 — Venda ✅ implementada
+
+Implementada na tabela `vendas` e no endpoint `POST /api/vendas?operador_id=` (corpo: `produto_id`, `usuario_comprador_id`). Regras: operador ativo da loja do produto; produto `DISPONIVEL` com avaliação `APROVADA`; comprador ativo, diferente do vendedor e que não seja operador de loja; uma venda por produto. Os valores (`valor_venda`, `valor_usuario`, `valor_loja`) são copiados da avaliação, a venda nasce `CONCLUIDA` com `referencia` única (`VND-XXXXXXXXXX`) e `data_hora`, e o produto passa a `VENDIDO`. O crédito do vendedor fica para a Fase 7.
 
 Criar a entidade e o fluxo de venda.
 

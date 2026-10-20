@@ -35,11 +35,14 @@ function statusChip(status) {
   return `<span class="status-chip status-${s.tone}">${esc(s.label)}</span>`;
 }
 
-export function productItemView(p, { vendedor, categoria, marca }) {
+export function productItemView(p, { vendedor, categoria, marca, comprador }) {
   const meta = [marca?.nome, categoria?.nome, p.estado_conservacao].filter(Boolean).join(" · ");
+  const price = p.valor_venda != null ? `<strong class="product-price">${formatBRL(p.valor_venda)}</strong>` : "";
   const trailing = p.status === "RECEBIDO"
     ? `<button class="tonal-button state-layer" data-action="evaluate" data-id="${p.id}">Avaliar</button>`
-    : p.valor_venda != null ? `<strong class="product-price">${formatBRL(p.valor_venda)}</strong>` : "";
+    : p.status === "DISPONIVEL"
+      ? `<span class="product-trailing">${price}<button class="tonal-button state-layer" data-action="sell" data-id="${p.id}">Vender</button></span>`
+      : price;
   return `
     <article class="list-item product-item">
       <span class="list-icon">${icon(p.status === "VENDIDO" ? "sold" : p.status === "DISPONIVEL" ? "sell" : "hourglass")}</span>
@@ -47,6 +50,7 @@ export function productItemView(p, { vendedor, categoria, marca }) {
         <strong>${esc(p.nome)}</strong>
         <span>${esc(meta || "Sem categoria e marca")}</span>
         <span class="product-seller">${icon("person", "icon icon-sm")}${esc(vendedor?.nome || "Vendedor não encontrado")}</span>
+        ${comprador ? `<span class="product-seller">${icon("shoppingBag", "icon icon-sm")}Comprado por ${esc(comprador.nome)}</span>` : ""}
         ${statusChip(p.status)}
       </span>
       ${trailing}
@@ -190,6 +194,40 @@ export function splitPreviewView(split) {
       <div><dt><span class="dot dot-store"></span>Loja</dt><dd><strong>${formatCents(split.loja)}</strong><small>${100 - pct}%</small></dd></div>
       <div class="split-total"><dt>Valor de venda</dt><dd><strong>${formatCents(split.venda)}</strong></dd></div>
     </dl>`;
+}
+
+export function sellProductView({ produto, vendedor, categoria, marca, avaliacao, buyers, selected }) {
+  const meta = [marca?.nome, categoria?.nome, produto.estado_conservacao].filter(Boolean).join(" · ");
+  const venda = Number(avaliacao?.valor_venda ?? produto.valor_venda ?? 0);
+  return `
+    <main class="page form-page">
+      ${subpageHeader("Vender produto", "Registre a venda feita pela loja a um cliente.")}
+      <section class="product-summary">
+        <span class="list-icon">${icon("sell")}</span>
+        <span class="list-text">
+          <strong>${esc(produto.nome)}</strong>
+          <span>${esc(meta || "Sem categoria e marca")}</span>
+          <span class="product-seller">${icon("person", "icon icon-sm")}Vendedor: ${esc(vendedor?.nome || "—")}</span>
+        </span>
+      </section>
+      <form id="sellForm" class="form-card" novalidate>
+        <h2 class="form-section">Cliente comprador</h2>
+        <div class="field-row">
+          ${field({ id: "fBuyer", label: "Comprador", hint: buyers.length ? "Quem está comprando o produto." : "Nenhum cliente disponível. Cadastre o comprador ao lado.",
+            control: `<select id="fBuyer" class="input" required>${options(buyers, selected, "Selecione o comprador")}</select>` })}
+          <button type="button" class="outlined-button state-layer" data-action="new-buyer">${icon("personAdd", "icon icon-sm")}Novo cliente</button>
+        </div>
+        <h2 class="form-section">Valores da avaliação</h2>
+        <section class="split-preview">${avaliacao
+          ? splitPreviewView({ venda: Math.round(venda * 100), cliente: Math.round(Number(avaliacao.valor_usuario) * 100), loja: Math.round(Number(avaliacao.valor_loja) * 100) })
+          : `<p class="split-empty">Valor de venda: <strong>${formatBRL(venda)}</strong></p>`}</section>
+        <div id="formMessage" aria-live="polite"></div>
+        <div class="form-actions">
+          <button type="button" class="text-button state-layer" data-action="go-dashboard">Cancelar</button>
+          <button type="submit" class="filled-button state-layer">${icon("sold", "icon icon-sm")}Registrar venda</button>
+        </div>
+      </form>
+    </main>`;
 }
 
 export function customerDialogContent() {

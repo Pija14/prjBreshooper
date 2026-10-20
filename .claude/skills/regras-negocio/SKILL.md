@@ -28,6 +28,7 @@ Uma pessoa entrega um produto usado a uma **loja parceira**; um **operador** da 
 
 1. **Não existe entidade "vendedor"** — o vendedor é um `usuario` (campo `usuario_vendedor_id` no produto).
 2. **Operador pertence a uma loja** e só opera produtos **da própria loja**, e somente se estiver `ATIVO`.
+   - **Venda:** registrada pelo operador ativo da loja (`POST /api/vendas`) para um comprador ativo que não é o vendedor nem operador; valores copiados da avaliação; uma venda por produto.
    - **Operador não vende nem compra.** Um operador ativo nunca é `usuario_vendedor_id` de produto (a API retorna 400) e, no app, vê só a Área da loja — sem saldo e sem comprar/vender.
 3. **Produto exige categoria e marca por ID** (cadastros próprios, não texto livre).
 4. **Uma avaliação por produto** (restrição única `uq_avaliacoes_produto`).
@@ -42,7 +43,8 @@ Uma pessoa entrega um produto usado a uma **loja parceira**; um **operador** da 
 Produto:    RECEBIDO ──(avaliação APROVADA pelo operador da loja)──► DISPONIVEL ──(venda)──► VENDIDO
                 └───────────────────────────────► CANCELADO
 Operador / Usuário / Loja / Categoria / Marca:  ATIVO ⇄ INATIVO
-Status já previstos no domínio:  PENDENTE, APROVADA, CONCLUIDA (venda/crédito — a especificar)
+Venda:      CONCLUIDA (registrada pelo operador da loja; produto passa a VENDIDO)
+Status já previstos no domínio:  PENDENTE, APROVADA, CONCLUIDA (crédito — a especificar)
 ```
 
 Transições fora deste diagrama precisam ser definidas no `BRESHOPPER.md` antes de implementadas.

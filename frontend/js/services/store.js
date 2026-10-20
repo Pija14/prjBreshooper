@@ -15,17 +15,19 @@ export function rememberStore(lojaId) {
 
 // Carrega tudo de que o painel e os formulários precisam, em paralelo.
 export async function loadStoreData(lojaId) {
-  const [produtos, categorias, marcas, usuarios, operadores] = await Promise.all([
+  const [produtos, categorias, marcas, usuarios, operadores, avaliacoes, vendas] = await Promise.all([
     apiRequest(`/api/produtos?loja_id=${lojaId}`),
     apiRequest("/api/categorias"),
     apiRequest("/api/marcas"),
     apiRequest("/api/usuarios"),
     apiRequest("/api/operadores"),
+    apiRequest("/api/avaliacoes"),
+    apiRequest(`/api/vendas?loja_id=${lojaId}`),
   ]);
-  return { produtos, categorias, marcas, usuarios, operadores };
+  return { produtos, categorias, marcas, usuarios, operadores, avaliacoes, vendas };
 }
 
-// Clientes que podem entregar produtos: usuários ativos que não são operadores de nenhuma loja.
+// Clientes (vendedores ou compradores): usuários ativos que não são operadores de nenhuma loja.
 export function sellerCandidates({ usuarios, operadores }) {
   const operatorUsers = new Set(operadores.map(o => o.usuario_id));
   return usuarios
@@ -54,5 +56,13 @@ export function evaluateProduct(operadorId, { produtoId, valorVenda, valorUsuari
   return apiRequest(`/api/avaliacoes?operador_id=${operadorId}`, {
     method: "POST",
     body: { produto_id: produtoId, valor_venda: valorVenda, valor_usuario: valorUsuario, valor_loja: valorLoja },
+  });
+}
+
+// Operador registra, em nome da loja, a venda a um cliente; valores vêm da avaliação.
+export function registerSale(operadorId, { produtoId, compradorId }) {
+  return apiRequest(`/api/vendas?operador_id=${operadorId}`, {
+    method: "POST",
+    body: { produto_id: produtoId, usuario_comprador_id: compradorId },
   });
 }
